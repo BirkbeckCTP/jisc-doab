@@ -1,4 +1,5 @@
 import argparse
+import logging
 import sys
 
 from doab.client import DOABOAIClient
@@ -11,6 +12,12 @@ PUBLISHER_ID = "publisher_id"
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-d", "--debug",
+    help="Sets debug mode on",
+    action="store_true",
+    default=False,
+)
 subparsers = parser.add_subparsers(help="commands", dest="incantation")
 
 extract_parser = subparsers.add_parser(
@@ -74,6 +81,9 @@ def publisher_validator(arg):
 
 def run():
     args = parser.parse_args()
+    if args.debug is True:
+        logging.basicConfig(level=logging.DEBUG)
+
     if args.incantation not in COMMANDS_MAP:
         parser.print_help()
     else:
