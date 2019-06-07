@@ -9,6 +9,7 @@ from doab.files import FileManager
 EXTRACT_CMD = "extract"
 PUBLISHERS_CMD = "publishers"
 PUBLISHER_ID = "publisher_id"
+OUTPUT_PATH = "output_path"
 
 
 parser = argparse.ArgumentParser()
@@ -18,6 +19,7 @@ parser.add_argument(
     action="store_true",
     default=False,
 )
+
 subparsers = parser.add_subparsers(help="commands", dest="incantation")
 
 extract_parser = subparsers.add_parser(
@@ -29,6 +31,11 @@ extract_parser.add_argument(
     help="The identifier for the publisher in DOAB",
     type=str
 )
+extract_parser.add_argument(
+    "-o", "--output_path",
+    help="Path to the desired ouput directory, defaults to `pwd`/out ",
+    default="out",
+)
 
 publishers_parser = subparsers.add_parser(
     PUBLISHERS_CMD,
@@ -36,8 +43,8 @@ publishers_parser = subparsers.add_parser(
 )
 
 
-def extract_corpus_for_publisher_id(publisher_id):
-    writer = FileManager("out")
+def extract_corpus_for_publisher_id(publisher_id, output_path):
+    writer = FileManager(output_path)
     client = DOABOAIClient()
     if publisher_id == "all":
         records = client.fetch_all_records()
@@ -54,7 +61,10 @@ def print_publishers():
 
 
 COMMANDS_MAP = {
-    EXTRACT_CMD: (extract_corpus_for_publisher_id, (PUBLISHER_ID,)),
+    EXTRACT_CMD: (
+        extract_corpus_for_publisher_id,
+        (PUBLISHER_ID, OUTPUT_PATH)
+    ),
     PUBLISHERS_CMD: (print_publishers, "")
 }
 
