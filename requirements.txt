@@ -1,0 +1,2 @@
+requests==2.21.0
+sickle==0.6.4
