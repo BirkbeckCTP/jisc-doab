@@ -23,4 +23,9 @@ setuptools.setup(
         # "License :: OSI Approved :: TBD",
         "Operating System :: OS Independent",
     ],
+    entry_points={
+        "console_scripts": [
+            "doab = doab.cli:run"
+        ]
+    }
 )

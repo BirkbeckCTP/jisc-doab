@@ -6,8 +6,8 @@ from urllib.parse import urlparse
 
 from sickle import Sickle
 
-import const
-from corpus_extractors import CORPUS_EXTRACTORS
+from doab import const
+from doab.corpus_extractors import CORPUS_EXTRACTORS
 
 
 class DOABOAIClient():

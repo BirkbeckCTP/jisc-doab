@@ -1,8 +1,8 @@
 import argparse
 
-from client import DOABOAIClient
-import const
-from files import FileManager
+from doab.client import DOABOAIClient
+from doab import const
+from doab.files import FileManager
 
 EXTRACT_CMD = "extract"
 PUBLISHERS_CMD = "publishers"
@@ -48,10 +48,14 @@ COMMANDS_MAP = {
 }
 
 
-if __name__ == "__main__":
+def run():
     args = parser.parse_args()
     if args.incantation not in COMMANDS_MAP:
         parser.print_help()
     else:
         command, arg_names = COMMANDS_MAP[args.incantation]
         command(*(getattr(args, arg) for arg in arg_names))
+
+
+if __name__ == "__main__":
+    run()
