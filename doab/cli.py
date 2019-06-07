@@ -12,6 +12,28 @@ PUBLISHER_ID = "publisher_id"
 OUTPUT_PATH = "output_path"
 
 
+def publisher_validator(arg):
+    """ Ensures that the publihser id argument is either an int or 'all' """
+    if arg == "all":
+        response = ""
+        while response.lower() not in {"y", "n"}:
+            response = input(
+                "WARNING! You are requesting to extract the entire DOAB "
+                "database. Proceed? [y/N]: "
+            )
+        if response.lower() == "n":
+            exit()
+
+    elif arg.isdigit():
+        arg = int(arg)
+    else:
+        raise argparse.ArgumentTypeError(
+            "'%s' is not a valid publisher id" % arg
+        )
+
+    return arg
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-d", "--debug",
@@ -29,7 +51,7 @@ extract_parser = subparsers.add_parser(
 extract_parser.add_argument(
     "publisher_id",
     help="The identifier for the publisher in DOAB",
-    type=str
+    type=publisher_validator
 )
 extract_parser.add_argument(
     "-o", "--output_path",
@@ -67,26 +89,6 @@ COMMANDS_MAP = {
     ),
     PUBLISHERS_CMD: (print_publishers, "")
 }
-
-
-def publisher_validator(arg):
-    """ Ensures that the publihser id argument is either an int or 'all' """
-    if arg == "all":
-        response = ""
-        while response.lower() not in {"y", "n"}:
-            response = input(
-                "WARNING! You are requesting to extract the entire DOAB "
-                "database. Proceed? [y/N]: "
-            )
-        if response.lower() == "n":
-            exit()
-
-    elif arg.is_digit():
-        arg = int(arg)
-    else:
-        raise TypeError("'%s' is not a valid publisher id")
-
-    return arg
 
 
 def run():
