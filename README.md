@@ -41,3 +41,8 @@ optional arguments:
 
 There is a magic publisher_id argument that will extract the entire DOAB repository:
 `doab extract all`
+
+### Running the CLI tools without installing the project
+If you don't want to install the doab tools onto your system, you can also run them with a python 3.7+ interpreter from the `doab/cli.py` entrypoint
+
+`python doab/cli.py`
