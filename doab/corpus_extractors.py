@@ -4,7 +4,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-class BaseExtractor():
+class BaseCorpusExtractor():
     def __init__(self, identifier):
         self.identifier = identifier
 
@@ -33,7 +33,7 @@ class BaseExtractor():
         raise NotImplementedError
 
 
-class PDFExtractor(BaseExtractor):
+class PDFCorpusExtractor(BaseCorpusExtractor):
     @staticmethod
     def validate_identifier(identifier):
         session = requests.session()
@@ -51,5 +51,5 @@ class PDFExtractor(BaseExtractor):
 
 
 CORPUS_EXTRACTORS = [
-    PDFExtractor,
+    PDFCorpusExtractor,
 ]

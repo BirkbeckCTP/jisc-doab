@@ -16,13 +16,21 @@ class DOABOAIClient():
         self._sickle = Sickle(const.DOAB_OAI_ENDPOINT)
 
     def fetch_records_for_publisher_id(self, publisher_id):
-        records = self._sickle.ListRecords(
-            metadataPrefix='oai_dc',
-            set=f"publisher_{publisher_id}",
-        )
+        return self._fetch_records(publisher_id=publisher_id)
+
+    def fetch_all_records(self):
+        return self._fetch_records()
+
+    def _fetch_records(self, publisher_id=None):
+        kwargs = {
+            "metadataPrefix": "oai_dc",
+        }
+        if publisher_id is not None:
+            kwargs["set"] = f"publisher_{publisher_id}"
+
         return (
             DOABRecord(record)
-            for record in records
+            for record in self._sickle.ListRecords(**kwargs)
             if record.header.deleted is False
         )
 
@@ -35,21 +43,24 @@ class DOABRecord():
         # identifier header format is 'oai:doab-books:{id}'
         self.doab_id = record.header.identifier.split(":")[-1]
         self.identifiers = filter(is_uri, record.metadata["identifier"])
-        parsers = [
-            parser.from_identifier(identifier)
+        extractors = [
+            extractor.from_identifier(identifier)
             for identifier in self.identifiers
-            for parser in CORPUS_EXTRACTORS
+            for extractor in CORPUS_EXTRACTORS
         ]
-        self.parsers = [parser for parser in parsers if parser is not None]
+        self.extractors = [
+            extractor
+            for extractor in extractors
+            if extractor is not None
+        ]
 
     def __str__(self):
         return f"<{self.__class__.__name__}:{self.publisher_id}>"
 
     def persist(self, writer):
-        for parser in self.parsers:
-            for label, data in parser.parse():
-                yield label
-                writer.write(
+        for extractor in self.extractors:
+            for label, data in extractor.extract():
+                writer.write_bytes(
                     self.doab_id,
                     filename=label,
                     to_write=data,
