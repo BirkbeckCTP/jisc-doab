@@ -59,7 +59,7 @@ class PDFCorpusExtractor(MimeBasedCorpusExtractor):
 
 class EPUBCorpusExtractor(MimeBasedCorpusExtractor):
     CONTENT_TYPE = "application/epub+zip"
-    FILE_LABEL = "epub.pdf"
+    FILE_LABEL = "book.epub"
 
 
 class DebugCorpusExtractor(BaseCorpusExtractor):
@@ -93,7 +93,7 @@ class SpringerCorpusExtractor(BaseCorpusExtractor):
             uri = f"{self.PDF_BASE_URL}{self.doi}.pdf"
             yield("book.pdf", self._fetch(uri))
             uri = f"{self.EPUB_BASE_URL}{self.doi}.epub"
-            yield("epub.pdf", self._fetch(uri))
+            yield("book.epub", self._fetch(uri))
         except requests.exceptions.HTTPError as e:
             # Some chapters are flagged as books leading to these
             # requests returning a 404
