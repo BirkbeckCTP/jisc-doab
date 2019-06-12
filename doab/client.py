@@ -10,6 +10,12 @@ from doab import const
 from doab.corpus_extractors import CORPUS_EXTRACTORS
 
 
+def record_is_active_book(record):
+    return (
+        record.header.deleted is False
+        and "book" in record.metadata["type"]
+    )
+
 class DOABOAIClient():
 
     def __init__(self):
@@ -31,7 +37,7 @@ class DOABOAIClient():
         return (
             DOABRecord(record)
             for record in self._sickle.ListRecords(**kwargs)
-            if record.header.deleted is False
+            if record_is_active_book(record)
         )
 
 
@@ -55,7 +61,7 @@ class DOABRecord():
         ]
 
     def __str__(self):
-        return f"<{self.__class__.__name__}:{self.publisher_id}>"
+        return f"<{self.__class__.__name__}:{self.doab_id}>"
 
     def persist(self, writer):
         for extractor in self.extractors:
