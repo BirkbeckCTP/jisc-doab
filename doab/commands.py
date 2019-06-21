@@ -10,7 +10,7 @@ def print_publishers():
         print(f"{pub.value}\t{pub.name}")
 
 
-def extractor(publisher_id, output_path):
+def extractor(publisher_id, output_path, multithread=False):
     executor = ThreadPoolExecutor(max_workers=15)
     writer = FileManager(output_path)
     client = DOABOAIClient()
@@ -20,8 +20,7 @@ def extractor(publisher_id, output_path):
         records = client.fetch_records_for_publisher_id(publisher_id)
     for record in records:
         print(f"Ectracting Corpus for DOAB record with ID {record.doab_id}")
-        executor.submit(record.persist, writer)
-        writer.write_bytes(
-            filename="metadata.json",
-            to_write=record.export_metadata().encode("utf-8"),
-        )
+        if multithread:
+            executor.submit(record.persist, writer)
+        else:
+            record.persist(writer)

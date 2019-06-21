@@ -1,13 +1,30 @@
 import logging
+import json
+import re
 import requests
 
 logger = logging.getLogger(__name__)
 
 
-class BaseCorpusExtractor():
-    def __init__(self, identifier):
+class BaseExtractor():
+    """ A Base class for extracting content"""
+    def __init__(self, record, identifier):
+        self.record = record
         self.identifier = identifier
         logger.debug(f"Preparing extractor {self}")
+
+    @classmethod
+    def from_identifier(cls, record, identifier):
+        """Instantiates the extractor if relevant for the identifier
+        :param record: An instance of client.DOABRecord
+        :return: an instance of `cls`
+        """
+        return cls(record, identifier)
+
+
+class BaseCorpusExtractor(BaseExtractor):
+    def __init__(self, record, identifier):
+        super().__init__(record, identifier)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.identifier})"
@@ -20,9 +37,9 @@ class BaseCorpusExtractor():
         raise NotImplementedError()
 
     @classmethod
-    def from_identifier(cls, identifier):
+    def from_identifier(cls, record, identifier):
         if cls.validate_identifier(identifier):
-            return cls(identifier)
+            return super().from_identifier(record, identifier)
         else:
             return None
 
@@ -51,6 +68,47 @@ class MimeBasedCorpusExtractor(BaseCorpusExtractor):
             yield (self.FILE_LABEL, response.content)
         else:
             raise response.raise_for_status()
+
+
+class JSONMetadataExtractor(BaseCorpusExtractor):
+    METADATA_KEYS = {
+        "title", "identifier", "creator",
+        "language", "publisher", "date",
+        "description",
+    }
+    DOI_RE = re.compile(r"/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i")
+
+    @classmethod
+    def validate_identifier(cls, identifier):
+        return identifier.startswith("https://www.doabooks.org/doab?func=search")
+
+    @classmethod
+    def get_doi_from_metadata(cls, metadata):
+        """ Matches a DOI in the metadata by re.findall
+        :param metadata: A `Mapping` from metadata keys to metadata values
+        :return: A DOI `str` or `None`
+        """
+        description = "\n".join(metadata["description"])
+        matches  = re.findall(cls.DOI_RE, description)
+        if not matches:
+            doi = None
+        elif len(matches) == 1:
+           doi = matches[0]
+        else:
+            logger.debug(f"Matched more than one DOI {matches}")
+            doi = matches[0]
+
+        return doi
+
+    def extract(self):
+        metadata = {
+            key: self.record.metadata.get(key)
+            for key in self.METADATA_KEYS
+        }
+        json_string = json.dumps(metadata)
+        metadata["DOI"] = self.get_doi_from_metadata(metadata)
+        yield ("metadata.json", json_string.encode("utf-8"))
+
 
 class PDFCorpusExtractor(MimeBasedCorpusExtractor):
     CONTENT_TYPE = "application/pdf"
@@ -121,4 +179,5 @@ CORPUS_EXTRACTORS = [
     PDFCorpusExtractor,
     EPUBCorpusExtractor,
     SpringerCorpusExtractor,
+    JSONMetadataExtractor,
 ]

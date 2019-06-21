@@ -1,6 +1,7 @@
 """
 Python clients for iteracting with DOAB site and APIs
 """
+import json
 import logging
 from urllib.parse import urlparse
 
@@ -8,6 +9,8 @@ from sickle import Sickle
 
 from doab import const
 from doab.corpus_extractors import CORPUS_EXTRACTORS
+
+logger = logging.getLogger(__name__)
 
 
 def record_is_active_book(record):
@@ -43,14 +46,13 @@ class DOABOAIClient():
 
 class DOABRecord():
     """ A wrapper for an OAI record extracted from DOAB """
-
     def __init__(self, record):
         self.metadata = record.metadata
         # identifier header format is 'oai:doab-books:{id}'
         self.doab_id = record.header.identifier.split(":")[-1]
         self.identifiers = filter(is_uri, record.metadata["identifier"])
         extractors = [
-            extractor.from_identifier(identifier)
+            extractor.from_identifier(self, identifier)
             for identifier in self.identifiers
             for extractor in CORPUS_EXTRACTORS
         ]
@@ -64,6 +66,7 @@ class DOABRecord():
         return f"<{self.__class__.__name__}:{self.doab_id}>"
 
     def persist(self, writer):
+        labels = []
         for extractor in self.extractors:
             for label, data in extractor.extract():
                 writer.write_bytes(
@@ -71,6 +74,8 @@ class DOABRecord():
                     filename=label,
                     to_write=data,
                 )
+            labels.append(label)
+        print(f"Extracted {len(labels)} items: {labels}")
 
 
 def is_uri(uri):
