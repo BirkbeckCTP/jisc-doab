@@ -5,7 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from doab.db.utils import get_dsn
+from doab.db import get_dsn
 from doab.db.models import Base
 
 # this is the Alembic Config object, which provides
