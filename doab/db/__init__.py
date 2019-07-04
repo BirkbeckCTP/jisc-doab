@@ -25,8 +25,8 @@ def start_engine(dsn):
         _ENGINE = create_engine(dsn, echo=True)
         _SESSION = scoped_session(sessionmaker(_ENGINE))
 
-class get_session(ContextDecorator):
-    def __init__(self, *args, dsn=None, **kwargs):
+class session_context(ContextDecorator):
+    def __init__(self, dsn=None, *args, **kwargs):
         if not _ENGINE:
             start_engine(dsn or get_dsn())
 
