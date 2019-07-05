@@ -8,6 +8,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -16,7 +17,8 @@ Base = declarative_base()
 
 book_author = Table("book_author", Base.metadata,
     Column("book_id", String, ForeignKey("book.doab_id")),
-    Column("author_id", String, ForeignKey("author.id")),
+    Column("author_id", String, ForeignKey("author.standarised_name")),
+    UniqueConstraint('book_id', 'author_id', name="unique_book_author"),
 )
 
 
@@ -56,9 +58,8 @@ class Reference(Base):
 
 class Author(Base):
     __tablename__ = "author"
-    id = Column(String, primary_key=True)
     first_name = Column(String)
     middle_name = Column(String)
     last_name = Column(String)
-    standarised_name = Column(String)
+    standarised_name = Column(String, primary_key=True)
     reference_name = Column(String)
