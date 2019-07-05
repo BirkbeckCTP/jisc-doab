@@ -1,16 +1,33 @@
 import argparse
 import logging
 import sys
+from timeit import default_timer as timer
 
-from doab.client import DOABOAIClient
-from doab import const
-from doab.files import FileManager
+from doab.commands import (
+    extractor,
+    print_publishers,
+    db_populator,
+)
 
+#
+## Const
+#
+
+# Commands
 EXTRACT_CMD = "extract"
 PUBLISHERS_CMD = "publishers"
+POPULATOR_CMD = "populate"
+
+# Argument names
 PUBLISHER_ID = "publisher_id"
 OUTPUT_PATH = "output_path"
+INPUT_PATH = "input_path"
+BOOK_IDS = "book_ids"
 
+
+#
+## Validators
+#
 
 def publisher_validator(arg):
     """ Ensures that the publihser id argument is either an int or 'all' """
@@ -33,6 +50,13 @@ def publisher_validator(arg):
 
     return arg
 
+def string_is_digit(arg):
+    if not arg.is_digit():
+        raise argparse.ArgumentTypeError(
+            "'%s' is not a valid book id" % arg
+        )
+    return int(arg)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -43,51 +67,65 @@ parser.add_argument(
 )
 
 subparsers = parser.add_subparsers(help="commands", dest="incantation")
-
+#
+## Extractor parser
+#
 extract_parser = subparsers.add_parser(
     EXTRACT_CMD,
     help="Tool for extraction of corpus and metadata from DOAB",
 )
 extract_parser.add_argument(
-    "publisher_id",
+    f"{PUBLISHER_ID}",
     help="The identifier for the publisher in DOAB",
     type=publisher_validator
 )
 extract_parser.add_argument(
-    "-o", "--output_path",
+    "-o", f"--{OUTPUT_PATH}",
     help="Path to the desired ouput directory, defaults to `pwd`/out ",
     default="out",
 )
+
+#
+## Publisher parser
+#
 
 publishers_parser = subparsers.add_parser(
     PUBLISHERS_CMD,
     help="Prints a list of all the supported publishers",
 )
 
+#
+## DB Populator parser
+#
 
-def extract_corpus_for_publisher_id(publisher_id, output_path):
-    writer = FileManager(output_path)
-    client = DOABOAIClient()
-    if publisher_id == "all":
-        records = client.fetch_all_records()
-    else:
-        records = client.fetch_records_for_publisher_id(publisher_id)
-    for record in records:
-        print(f"Ectracting Corpus for DOAB record with ID {record.doab_id}")
-        record.persist(writer)
-
-
-def print_publishers():
-    for pub in const.Publisher:
-        print(f"{pub.value}\t{pub.name}")
+populator_parser = subparsers.add_parser(
+    POPULATOR_CMD,
+    help="Populates the database with the metadata extracted with `extract`",
+)
+populator_parser.add_argument(
+    "-i", "--input_path",
+    help="Path to the desired input directory, defaults to `pwd`/out ",
+    default="out",
+)
+populator_parser.add_argument(
+    "-b", f"--{BOOK_IDS}",
+    help="A list of book ids for which to populate their db records. "
+        "If not provided, all books found in the input path will be processed ",
+    nargs="+",
+    type=int,
+)
 
 
 COMMANDS_MAP = {
     EXTRACT_CMD: (
-        extract_corpus_for_publisher_id,
-        (PUBLISHER_ID, OUTPUT_PATH)
+        extractor,
+        (PUBLISHER_ID, OUTPUT_PATH),
     ),
-    PUBLISHERS_CMD: (print_publishers, "")
+    POPULATOR_CMD: (
+        db_populator,
+        (INPUT_PATH, BOOK_IDS),
+    ),
+    PUBLISHERS_CMD: (print_publishers, ""),
 }
 
 
@@ -100,7 +138,11 @@ def run():
         parser.print_help()
     else:
         command, arg_names = COMMANDS_MAP[args.incantation]
+        start = timer()
         command(*(getattr(args, arg) for arg in arg_names))
+        end = timer()
+        if args.debug:
+            print(end - start)
 
 
 def exit():
