@@ -74,7 +74,7 @@ class DOABRecord():
                     filename=label,
                     to_write=data,
                 )
-            labels.append(label)
+                labels.append(label)
         print(f"Extracted {len(labels)} items: {labels}")
 
 

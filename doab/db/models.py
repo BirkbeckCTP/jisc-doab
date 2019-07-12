@@ -4,6 +4,7 @@ ORM models for the persistence of DOAB metadata objects
 from sqlalchemy import (
     Column,
     ForeignKey,
+    Index,
     Integer,
     String,
     Table,
@@ -21,9 +22,21 @@ book_author = Table("book_author", Base.metadata,
     UniqueConstraint('book_id', 'author_id', name="unique_book_author"),
 )
 
+book_reference = Table("book_reference", Base.metadata,
+    Column("book_id", String, ForeignKey("book.doab_id")),
+    Column("reference_id", String, ForeignKey("reference.id")),
+    UniqueConstraint('book_id', 'reference_id', name="unique_book_reference"),
+)
+
 
 class Book(Base):
     __tablename__ = "book"
+    __table_args__ = (
+        Index('title_idx', "title",
+              postgresql_ops={"title": "gin_trgm_ops"},
+              postgresql_using='gin'),
+    )
+
     doab_id = Column(String, primary_key=True)
     title = Column(String)
     publisher = Column(String)
@@ -35,8 +48,15 @@ class Book(Base):
         secondary=book_author,
         backref="books",
     )
+    references = relationship(
+        "Reference",
+        secondary=book_reference,
+        lazy='dynamic',
+        backref="books",
+    )
+
     identifiers = relationship("Identifier", backref="book")
-    references = relationship("Reference", backref="referrer")
+    referrers = relationship("Reference", backref="match")
 
     def update_with_metadata(self, metadata):
         self.title = metadata["title"],
@@ -52,8 +72,29 @@ class Identifier(Base):
 
 class Reference(Base):
     __tablename__ = "reference"
-    id = Column(Integer, primary_key=True)
-    referrer_id = Column(Text, ForeignKey("book.doab_id"))
+    id = Column(String, primary_key=True)
+    matched_id = Column(Text, ForeignKey("book.doab_id"), nullable=True)
+
+    parsed_references = relationship("ParsedReference", backref="reference")
+
+
+class ParsedReference(Base):
+    __tablename__ = "parsed_reference"
+    __table_args__ = (
+        Index('parse_ref_title_idx', "title",
+              postgresql_ops={"title": "gin_trgm_ops"},
+              postgresql_using='gin'),
+    )
+    reference_id = Column(String, ForeignKey("reference.id"), primary_key=True)
+    raw_reference = Column(Text)
+    parser = Column(String)
+    authors = Column(String, nullable=True)
+    title = Column(String, nullable=True)
+    pages = Column(String, nullable=True)
+    journal = Column(String, nullable=True)
+    volume = Column(String, nullable=True)
+    doi = Column(String, nullable=True)
+    year = Column(String, nullable=True)
 
 
 class Author(Base):

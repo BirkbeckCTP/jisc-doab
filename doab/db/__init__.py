@@ -18,7 +18,7 @@ def get_dsn():
         os.getenv("DOAB_DB_NAME", "doab"),
     )
 
-def start_engine(dsn):
+def start_engine(dsn, echo=False):
     global _ENGINE
     global _SESSION
     if not _ENGINE:

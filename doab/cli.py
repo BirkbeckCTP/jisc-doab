@@ -7,6 +7,8 @@ from doab.commands import (
     extractor,
     print_publishers,
     db_populator,
+    parse_references,
+    match_reference,
 )
 
 #
@@ -17,13 +19,33 @@ from doab.commands import (
 EXTRACT_CMD = "extract"
 PUBLISHERS_CMD = "publishers"
 POPULATOR_CMD = "populate"
+PARSE_CMD = "parse"
+MATCH_CMD = "match"
 
 # Argument names
 PUBLISHER_ID = "publisher_id"
 OUTPUT_PATH = "output_path"
 INPUT_PATH = "input_path"
 BOOK_IDS = "book_ids"
+REFERENCE = "citation"
 
+# Arguments
+
+BOOK_IDS_ARG = (
+    ("-b", f"--{BOOK_IDS}"),
+    {"help": "A list of book ids for which to populate their db records. "
+        "If not provided, all books found in the input path will be processed ",
+    "nargs": "+",
+    "type": int,
+    "dest": BOOK_IDS},
+)
+
+INPUT_PATH_ARG = (
+    ("-i", f"--{INPUT_PATH}"),
+    {"help": "Path to the desired input directory, defaults to `pwd`/out ",
+    "default": "out",
+    "dest" : INPUT_PATH},
+)
 
 #
 ## Validators
@@ -102,19 +124,32 @@ populator_parser = subparsers.add_parser(
     POPULATOR_CMD,
     help="Populates the database with the metadata extracted with `extract`",
 )
-populator_parser.add_argument(
-    "-i", "--input_path",
-    help="Path to the desired input directory, defaults to `pwd`/out ",
-    default="out",
-)
-populator_parser.add_argument(
-    "-b", f"--{BOOK_IDS}",
-    help="A list of book ids for which to populate their db records. "
-        "If not provided, all books found in the input path will be processed ",
-    nargs="+",
-    type=int,
-)
+populator_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
+populator_parser.add_argument(*BOOK_IDS_ARG[0], **BOOK_IDS_ARG[1])
 
+
+#
+## Reference parsing parser
+#
+parse_parser = subparsers.add_parser(
+    PARSE_CMD,
+    help="Parses the references for the provided book IDs",
+)
+parse_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
+parse_parser.add_argument(*BOOK_IDS_ARG[0], **BOOK_IDS_ARG[1])
+
+#
+## Reference matching parser
+#
+match_parser = subparsers.add_parser(
+    MATCH_CMD,
+    help="Tries to match the given reference with a book",
+)
+match_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
+match_parser.add_argument(
+    f"{REFERENCE}",
+    help="A Citation to be matched against the local database",
+)
 
 COMMANDS_MAP = {
     EXTRACT_CMD: (
@@ -125,19 +160,29 @@ COMMANDS_MAP = {
         db_populator,
         (INPUT_PATH, BOOK_IDS),
     ),
-    PUBLISHERS_CMD: (print_publishers, ""),
+    PARSE_CMD: (
+        parse_references,
+        (INPUT_PATH, BOOK_IDS),
+    ),
+     MATCH_CMD: (
+        match_reference,
+        (REFERENCE,),
+     ),
+       PUBLISHERS_CMD: (print_publishers, ""),
 }
 
 
 def run():
     args = parser.parse_args()
-    if args.debug is True:
-        logging.basicConfig(level=logging.DEBUG)
 
     if args.incantation not in COMMANDS_MAP:
         parser.print_help()
     else:
         command, arg_names = COMMANDS_MAP[args.incantation]
+        if args.debug:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.INFO)
         start = timer()
         command(*(getattr(args, arg) for arg in arg_names))
         end = timer()
