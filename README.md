@@ -23,26 +23,41 @@ To install the project in development mode run
 
 The following command line tools are currently supported:
 
-Extract:
-
-`doab extract`
 ```
-usage: doab extract [-h] [-o OUTPUT_PATH] publisher_id
+usage: doab [-h] [-d] {extract,publishers,populate,parse,match} ...
 
 positional arguments:
-  publisher_id          The identifier for the publisher in DOAB
+  {extract,publishers,populate,parse,match}
+                        commands
+    extract             Tool for extraction of corpus and metadata from DOAB
+    publishers          Prints a list of all the supported publishers
+    populate            Populates the database with the metadata extracted
+                        with `extract`
+    parse               Parses the references for the provided book IDs
+    match               Tries to match the given reference with a book
 
 optional arguments:
   -h, --help            show this help message and exit
-  -o OUTPUT_PATH, --output_path OUTPUT_PATH
-                        Path to the desired ouput directory, defaults to
-                        `pwd`/out
+  -d, --debug           Sets debug mode on
 ```
+
 
 There is a magic publisher_id argument that will extract the entire DOAB repository:
 `doab extract all`
 
-### Running the CLI tools without installing the project
-If you don't want to install the doab tools onto your system, you can also run them with a python 3.7+ interpreter from the `doab/cli.py` entrypoint
+### Running the CL within a docker container
+If you don't want to install the doab tools onto your system, you can also run them within a docker container.
+The included docker-compose file will run a postgres service to be used by the CLI tools
 
-`python doab/cli.py`
+GNU Make commands are available for the most common operations:
+
+```
+help:		 Show this help.
+doab-cli:	 Run DOAB commands in a container, the command should passed through the CMD variable (e.g.: `make doab-cli CMD="publishers")
+install:	 Runs database migrations on the postgres database
+rebuild:	 Rebuild the doab docker image.
+shell:		 Starts an interactive shell within a docker container build from the same image as the one used by the CLI
+db-client:	 Runs the database CLI client interactively within the database container
+uninstall:	 Removes all DOAB related docker containers, docker images and database volumes
+check:		 Runs the test suite
+```

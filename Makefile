@@ -15,16 +15,16 @@ export DOAB_DB_NAME
 export DOAB_DB_HOST
 export DOAB_DB_PORT
 
-all: doab
+all: doab-cli
 help:		## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
-doab:	## Run Janeway in a container and pass through a django command passed as the CMD environment variable
+doab-cli:	## Run DOAB commands in a container
 	docker-compose $(_VERBOSE) run --rm doab $(CMD)
 install:	## Runs database migrations on the postgres database
-	bash -c "alembic"
+	docker-compose run --rm --entrypoint=alembic doab upgrade head
 rebuild:	## Rebuild the doab docker image.
 	docker-compose build --no-cache doab
-shell:		## Runs the janeway-web service and starts an interactive bash process instead of the webserver
+shell:		## Starts an interactive shell within a docker container build from the same image as the one used by the CLI
 	docker-compose run --entrypoint=/bin/bash --rm doab
 db-client:	## runs the database CLI client interactively within the database container
 	docker exec -ti `docker ps -q --filter 'name=doab-postgres'` $(CLI_COMMAND)

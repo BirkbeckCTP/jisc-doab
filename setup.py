@@ -22,6 +22,7 @@ setuptools.setup(
         "bibtexparser",
         "bs4",
         "ebooklib",
+        "alembic",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
