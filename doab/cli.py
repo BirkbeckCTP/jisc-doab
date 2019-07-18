@@ -10,6 +10,7 @@ from doab.commands import (
     parse_references,
     match_reference,
 )
+from doab import const
 
 #
 ## Const
@@ -42,14 +43,16 @@ BOOK_IDS_ARG = (
 
 INPUT_PATH_ARG = (
     ("-i", f"--{INPUT_PATH}"),
-    {"help": "Path to the desired input directory, defaults to `pwd`/out ",
-    "default": "out",
+    {"help": f"Path to the desired input directory, defaults to "
+        "`pwd`/{const.DEFAULT_OUT_DIR}",
+    "default": f"{const.DEFAULT_OUT_DIR}",
     "dest" : INPUT_PATH},
 )
 
 #
 ## Validators
 #
+
 
 def publisher_validator(arg):
     """ Ensures that the publihser id argument is either an int or 'all' """
@@ -103,8 +106,9 @@ extract_parser.add_argument(
 )
 extract_parser.add_argument(
     "-o", f"--{OUTPUT_PATH}",
-    help="Path to the desired ouput directory, defaults to `pwd`/out ",
-    default="out",
+    help=f"Path to the desired ouput directory, defaults to "
+        "`pwd`/{const.DEFAULT_OUT_DIR} ",
+    default=f"{const.DEFAULT_OUT_DIR}",
 )
 
 #

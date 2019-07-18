@@ -17,6 +17,11 @@ setuptools.setup(
     install_requires=[
         "requests",
         "sickle",
+        "sqlalchemy",
+        "unidecode",
+        "bibtexparser",
+        "bs4",
+        "ebooklib",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

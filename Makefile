@@ -1,0 +1,37 @@
+DOAB_DB_PORT=5432
+DOAB_DB_HOST=doab-postgres
+DOAB_DB_USER=doab
+DOAB_DB_PASSWORD=doab
+DOAB_DB_VOLUME=db/postgres-data
+CLI_COMMAND=psql --username=$(DOAB_DB_USER) $(DOAB_DB_NAME)
+
+ifdef VERBOSE
+	_VERBOSE=--verbose
+endif
+
+export DOAB_DB_USER
+export DOAB_DB_PASSWORD
+export DOAB_DB_NAME
+export DOAB_DB_HOST
+export DOAB_DB_PORT
+
+all: doab
+help:		## Show this help.
+	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
+doab:	## Run Janeway in a container and pass through a django command passed as the CMD environment variable
+	docker-compose $(_VERBOSE) run --rm doab $(CMD)
+install:	## Runs database migrations on the postgres database
+	bash -c "alembic"
+rebuild:	## Rebuild the doab docker image.
+	docker-compose build --no-cache doab
+shell:		## Runs the janeway-web service and starts an interactive bash process instead of the webserver
+	docker-compose run --entrypoint=/bin/bash --rm doab
+db-client:	## runs the database CLI client interactively within the database container
+	docker exec -ti `docker ps -q --filter 'name=doab-postgres'` $(CLI_COMMAND)
+uninstall:	## Removes all doab related docker containers, docker images and database volumes
+	@bash -c "rm -rf volumes/*"
+	@bash -c "docker rm -f `docker ps --filter 'name=doab*' -aq` >/dev/null 2>&1 | true"
+	@bash -c "docker rmi `docker images -q doab*` >/dev/null 2>&1 | true"
+	@echo " DOAB Intersect has been uninstalled"
+check:		## Runs the test suite
+	bash -c "docker-compose run --rm --entrypoint=python doab doab/tests"

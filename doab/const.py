@@ -2,9 +2,12 @@
 DOAB related constants
 """
 from enum import Enum
+import os
 
 DOAB_URL = "https://www.doabooks.org"
 DOAB_OAI_ENDPOINT = DOAB_URL + "/oai"
+
+DEFAULT_OUT_DIR = os.getenv("DOAB_DEFAULT_OUT_DIR", "volumes/out")
 
 
 class Publisher(Enum):
