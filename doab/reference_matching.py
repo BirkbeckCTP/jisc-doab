@@ -37,13 +37,15 @@ def match_title_exact(reference):
 
 def match_title_fuzzy(reference):
     #TODO: Add weighting by match score
-    if "title" not in reference or reference["doi"] is None:
-        return None
+    if "title" not in reference or reference["title"] is None:
+        return []
+    title = reference["title"]
+    match_term = f"%{title}%"
     with session_context() as session:
-        session.query(
+        parses_matching = session.query(
             models.ParsedReference,
         ).filter(
-            models.ParsedReference.title.op("%", reference["title"]),
+            models.ParsedReference.title.op("%%")(match_term),
         )
     return chain.from_iterable(p.reference.books for p in parses_matching)
 

@@ -139,3 +139,4 @@ def match_reference(reference=None):
     print(f"Matched {len(matches)} books referencing the same citation")
     for i, matched in enumerate(matches, 1):
        print (f"{i}. {matched.doab_id} - {matched.title}") 
+    return matches

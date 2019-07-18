@@ -1,8 +1,7 @@
 import sys
 
-from doab.commands import db_populator, parse_references
+from doab.commands import db_populator, parse_references, match_reference
 from doab.const import DEFAULT_OUT_DIR
-from doab.reference_matching import match
 
 
 class TestManager(object):
@@ -39,16 +38,17 @@ class AcceptanceTest(object):
 
     def assert_references_matched(self):
         expected = {id_ for id_ in self.BOOK_IDS}
-        books = match(self.CITATION)
+        books = match_reference(self.CITATION)
         result = {book.doab_id for book in books}
         print(f"Expected book IDS: {self.BOOK_IDS}")
         print(f"Matched book IDS: {result}")
         failures = expected - result
         if failures:
-            sys.stderr.write(f"[FAILED] Missed book ids: {failures}")
+            sys.stderr.write(f"[FAILED] Missed book ids: {failures}\n")
+            sys.stderr.flush()
             sys.exit(1)
         else:
-            sys.stdout.write("[SUCCESS]")
+            print("[SUCCESS]")
 
     def run(self):
         self.assert_references_matched()
