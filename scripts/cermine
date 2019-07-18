@@ -1,0 +1,2 @@
+#!/bin/bash
+java -cp /usr/local/bin/cermine-impl-1.13-jar-with-dependencies.jar "$@"

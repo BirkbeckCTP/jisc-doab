@@ -1,0 +1,4 @@
+FROM python:3.7
+RUN pip3 install psycopg2-binary
+ADD scripts/* /usr/local/bin/
+ADD lib/cermine.jar /usr/local/bin/cermine.jar
