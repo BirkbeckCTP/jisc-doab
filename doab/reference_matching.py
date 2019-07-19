@@ -18,7 +18,7 @@ def match_by_doi(reference):
         return matches
     with session_context() as session:
         parses_matching = session.query(
-                models.ParsedReference.references.books
+                models.ParsedReference
             ).filter(
                 models.ParsedReference.doi == reference["doi"],
             )

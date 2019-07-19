@@ -27,6 +27,7 @@ MATCH_CMD = "match"
 PUBLISHER_ID = "publisher_id"
 OUTPUT_PATH = "output_path"
 INPUT_PATH = "input_path"
+THREADING = "threads"
 BOOK_IDS = "book_ids"
 REFERENCE = "citation"
 
@@ -47,6 +48,15 @@ INPUT_PATH_ARG = (
         "`pwd`/{const.DEFAULT_OUT_DIR}",
     "default": f"{const.DEFAULT_OUT_DIR}",
     "dest" : INPUT_PATH},
+)
+
+THREADING_ARG = (
+    ("-t", f"--{THREADING}"),
+    {"help": f"Number of maximum threads to fork for this command. If not "
+        "provided it will run single-threaded",
+    "default": 0,
+     "type": int,
+    "dest" : THREADING},
 )
 
 #
@@ -130,6 +140,7 @@ populator_parser = subparsers.add_parser(
 )
 populator_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
 populator_parser.add_argument(*BOOK_IDS_ARG[0], **BOOK_IDS_ARG[1])
+populator_parser.add_argument(*THREADING_ARG[0], **THREADING_ARG[1])
 
 
 #
@@ -141,6 +152,7 @@ parse_parser = subparsers.add_parser(
 )
 parse_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
 parse_parser.add_argument(*BOOK_IDS_ARG[0], **BOOK_IDS_ARG[1])
+parse_parser.add_argument(*THREADING_ARG[0], **THREADING_ARG[1])
 
 #
 ## Reference matching parser
@@ -162,11 +174,11 @@ COMMANDS_MAP = {
     ),
     POPULATOR_CMD: (
         db_populator,
-        (INPUT_PATH, BOOK_IDS),
+        (INPUT_PATH, BOOK_IDS, THREADING),
     ),
     PARSE_CMD: (
         parse_references,
-        (INPUT_PATH, BOOK_IDS),
+        (INPUT_PATH, BOOK_IDS, THREADING),
     ),
      MATCH_CMD: (
         match_reference,

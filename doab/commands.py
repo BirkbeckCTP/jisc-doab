@@ -16,6 +16,7 @@ from doab.reference_parsers import (
     CermineParserMixin,
     PalgraveEPUBParser,
 )
+from doab import tasker
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,8 @@ def list_extracted_books(path):
     return file_manager.list()
 
 
-def extractor(publisher_id, output_path, multithread=False):
-    executor = ThreadPoolExecutor(max_workers=15)
+def extractor(publisher_id, output_path, workers=0):
+    executor = ThreadPoolExecutor(max_workers=workers or 1)
     writer = FileManager(output_path)
     client = DOABOAIClient()
     if publisher_id == "all":
@@ -39,30 +40,27 @@ def extractor(publisher_id, output_path, multithread=False):
         records = client.fetch_records_for_publisher_id(publisher_id)
     for record in records:
         print(f"Extracting Corpus for DOAB record with ID {record.doab_id}")
-        if multithread:
+        if workers:
             executor.submit(record.persist, writer)
         else:
             record.persist(writer)
 
 
-def db_populator(input_path, book_ids=None, multithreaded=False):
+def db_populator(input_path, book_ids=None, workers=0):
     if not book_ids:
         book_ids = list_extracted_books(input_path)
-    total = len(book_ids)
     reader = FileManager(input_path)
-    executor = ThreadPoolExecutor(max_workers=15)
-    for i, book_id in enumerate(book_ids):
-        logger.info(f"Populating db with metadata {book_id}\t\t[{i}/{total}]")
+    msg = "Populating DB records for book "
+    tasker.run(populate_db, book_ids, msg, workers, reader)
+
+def populate_db(book_id, reader):
         try:
             raw_metadata = reader.read(str(book_id), "metadata.json")
         except FileNotFoundError as e:
             logger.error(e)
-            continue
+            return
         metadata = json.loads(raw_metadata)
-        if multithreaded:
-            executor.submit(upsert_book, book_id, metadata)
-        else:
-            upsert_book(book_id, metadata)
+        upsert_book(book_id, metadata)
 
 
 def upsert_book(book_id, metadata):
@@ -139,19 +137,23 @@ def upsert_identifier(session, identifier_str):
         identifier = models.Identifier(value=identifier_str)
     return identifier
 
-def parse_references(input_path, book_ids=None, multithreaded=False):
+def parse_references(input_path, book_ids=None, workers=0):
     if not book_ids:
         book_ids = list_extracted_books(input_path)
-    total = len(book_ids)
+    msg = "Parsing book"
+    tasker.run(parse_reference, book_ids, msg, workers, input_path)
+
+
+def parse_reference(book_id, input_path):
+    path = os.path.join(input_path, str(book_id))
     with session_context() as session:
-        for i, book_id in enumerate(book_ids):
-            logger.info(f"Parsing book {book_id}\t\t[{i}/{total}]")
-            path = os.path.join(input_path, str(book_id))
-            try:
-                parser = PalgraveEPUBParser(book_id, path) #TODO map publisher to parser
-                parser.run(session)
-            except FileNotFoundError as e:
-                logger.debug(f"No book.epub available: {e}")
+        try:
+            #TODO map publisher to parser
+            parser = PalgraveEPUBParser(book_id, path)
+            parser.run(session)
+        except FileNotFoundError as e:
+            logger.debug(f"No book.epub available: {e}")
+
 
 def match_reference(reference=None):
     # TODO: Allow user to choose parser?
@@ -162,3 +164,10 @@ def match_reference(reference=None):
     for i, matched in enumerate(matches, 1):
        print (f"{i}. {matched.doab_id} - {matched.title}")
     return matches
+
+
+def intersect():
+    with session_context() as session:
+        session.query(
+            models.Reference
+        )
