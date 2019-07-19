@@ -13,6 +13,16 @@ services:
       - "POSTGRES_USER=${DOAB_DB_USER}"
       - "POSTGRES_DB=${DOAB_DB_NAME}"
 
+  doab-pgadmin:
+    image: dpage/pgadmin4:latest
+    volumes:
+      - ./volumes/pgadmin:/var/lib/pgadmin
+    environment:
+      - "PGADMIN_DEFAULT_PASSWORD=${DOAB_DB_PASSWORD}"
+      - PGADMIN_DEFAULT_EMAIL=doab@email.com
+    ports:
+      - "8080:80"
+
   doab:
     build:
       context: .
@@ -33,4 +43,5 @@ services:
     image: dadarek/wait-for-dependencies
     depends_on:
      - "doab-postgres"
+     - "doab-pgadmin"
     command: "doab-posrgres:${DOAB_DB_PORT}"
