@@ -23,6 +23,7 @@ setuptools.setup(
         "bs4",
         "ebooklib",
         "alembic",
+        "colorlog",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

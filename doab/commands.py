@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from itertools import chain
 import json
+import logging
 import os
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -16,10 +17,16 @@ from doab.reference_parsers import (
     PalgraveEPUBParser,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def print_publishers():
     for pub in const.Publisher:
         print(f"{pub.value}\t{pub.name}")
+
+def list_extracted_books(path):
+    file_manager = FileManager(path)
+    return file_manager.list()
 
 
 def extractor(publisher_id, output_path, multithread=False):
@@ -39,10 +46,18 @@ def extractor(publisher_id, output_path, multithread=False):
 
 
 def db_populator(input_path, book_ids=None, multithreaded=False):
+    if not book_ids:
+        book_ids = list_extracted_books(input_path)
+    total = len(book_ids)
     reader = FileManager(input_path)
     executor = ThreadPoolExecutor(max_workers=15)
-    for book_id in book_ids:
-        raw_metadata = reader.read(str(book_id), "metadata.json")
+    for i, book_id in enumerate(book_ids):
+        logger.info(f"Populating db with metadata {book_id}\t\t[{i}/{total}]")
+        try:
+            raw_metadata = reader.read(str(book_id), "metadata.json")
+        except FileNotFoundError as e:
+            logger.error(e)
+            continue
         metadata = json.loads(raw_metadata)
         if multithreaded:
             executor.submit(upsert_book, book_id, metadata)
@@ -125,11 +140,18 @@ def upsert_identifier(session, identifier_str):
     return identifier
 
 def parse_references(input_path, book_ids=None, multithreaded=False):
+    if not book_ids:
+        book_ids = list_extracted_books(input_path)
+    total = len(book_ids)
     with session_context() as session:
-        for book_id in book_ids:
+        for i, book_id in enumerate(book_ids):
+            logger.info(f"Parsing book {book_id}\t\t[{i}/{total}]")
             path = os.path.join(input_path, str(book_id))
-            parser = PalgraveEPUBParser(book_id, path) #TODO map publisher to parser
-            parser.run(session)
+            try:
+                parser = PalgraveEPUBParser(book_id, path) #TODO map publisher to parser
+                parser.run(session)
+            except FileNotFoundError as e:
+                logger.debug(f"No book.epub available: {e}")
 
 def match_reference(reference=None):
     # TODO: Allow user to choose parser?
@@ -138,5 +160,5 @@ def match_reference(reference=None):
     matches = match(parsed_reference)
     print(f"Matched {len(matches)} books referencing the same citation")
     for i, matched in enumerate(matches, 1):
-       print (f"{i}. {matched.doab_id} - {matched.title}") 
+       print (f"{i}. {matched.doab_id} - {matched.title}")
     return matches

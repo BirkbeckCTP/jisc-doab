@@ -1,8 +1,8 @@
 import argparse
-import logging
 import sys
 from timeit import default_timer as timer
 
+from doab import const
 from doab.commands import (
     extractor,
     print_publishers,
@@ -10,7 +10,7 @@ from doab.commands import (
     parse_references,
     match_reference,
 )
-from doab import const
+from doab.config import init_logging
 
 #
 ## Const
@@ -178,15 +178,12 @@ COMMANDS_MAP = {
 
 def run():
     args = parser.parse_args()
+    init_logging(args.debug)
 
     if args.incantation not in COMMANDS_MAP:
         parser.print_help()
     else:
         command, arg_names = COMMANDS_MAP[args.incantation]
-        if args.debug:
-            logging.basicConfig(level=logging.DEBUG)
-        else:
-            logging.basicConfig(level=logging.INFO)
         start = timer()
         command(*(getattr(args, arg) for arg in arg_names))
         end = timer()

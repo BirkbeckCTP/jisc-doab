@@ -22,7 +22,7 @@ def start_engine(dsn, echo=False):
     global _ENGINE
     global _SESSION
     if not _ENGINE:
-        _ENGINE = create_engine(dsn, echo=True)
+        _ENGINE = create_engine(dsn)
         _SESSION = scoped_session(sessionmaker(_ENGINE))
 
 class session_context(ContextDecorator):

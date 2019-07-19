@@ -1,6 +1,6 @@
-import os
-from operator import itemgetter
 import logging
+from operator import itemgetter
+import os
 import zipfile
 
 from ebooklib import epub
@@ -27,9 +27,11 @@ class FileManager():
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def list(self, *path_parts):
-        return os.listdir(os.path.join(self.base_path, *path_parts))
-
+    def list(self, *path_parts, hidden=False):
+        path = os.path.join(self.base_path, *path_parts)
+        li = os.listdir(os.path.join(self.base_path, *path_parts))
+        if not hidden:
+            return [i for i in li if not i.startswith(".")]
     def read(self, *path_parts, mode=""):
         read_path = os.path.join(self.base_path, *path_parts)
         with open(read_path, f"r{mode}") as read_file:
