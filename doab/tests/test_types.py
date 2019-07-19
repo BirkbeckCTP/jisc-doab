@@ -33,14 +33,20 @@ class AcceptanceTest(object):
     INPUT_PATH = DEFAULT_OUT_DIR
 
     def __init__(self):
+        print(f"Starting test {self}")
+        print(f"Input citation: '{self.CITATION}")
+        print(f"Expected book IDS: {self.BOOK_IDS}")
+        print("Processing...")
         db_populator(self.INPUT_PATH, self.BOOK_IDS)
         parse_references(self.INPUT_PATH, self.BOOK_IDS)
+
+    def __str__(self):
+        return str(self.__class__.__name__)
 
     def assert_references_matched(self):
         expected = {id_ for id_ in self.BOOK_IDS}
         books = match_reference(self.CITATION)
         result = {book.doab_id for book in books}
-        print(f"Expected book IDS: {self.BOOK_IDS}")
         print(f"Matched book IDS: {result}")
         failures = expected - result
         if failures:

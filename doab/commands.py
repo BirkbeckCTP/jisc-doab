@@ -159,15 +159,10 @@ def match_reference(reference=None):
     # TODO: Allow user to choose parser?
     clean = CermineParserMixin.clean(reference)
     parsed_reference = CermineParserMixin.parse_reference(clean)
-    matches = match(parsed_reference)
+    matches = {(book.doab_id, book.title) for book in match(parsed_reference)}
     print(f"Matched {len(matches)} books referencing the same citation")
     for i, matched in enumerate(matches, 1):
-       print (f"{i}. {matched.doab_id} - {matched.title}")
+        book_id, title = matched
+        print (f"{i}. {book_id} - {title}")
     return matches
 
-
-def intersect():
-    with session_context() as session:
-        session.query(
-            models.Reference
-        )
