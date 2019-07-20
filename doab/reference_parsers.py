@@ -260,6 +260,7 @@ class EPUBPrepareMixin(BaseReferenceParser):
 
 
 class CrossrefParserMixin(HTTPBasedParserMixin):
+    PARSER_NAME = 'Crossref'
     """A parser that matches DOIS and retrieves metadata via Crossref API"""
 
     def prepare(self):
@@ -285,6 +286,7 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
 
 
 class CermineParserMixin(SubprocessParserMixin):
+    PARSER_NAME = 'Cermine'
     CMD = "cermine"
     ARGS = [
         "pl.edu.icm.cermine.bibref.CRFBibReferenceParser",
@@ -361,3 +363,4 @@ def yield_parsers(book, input_path):
 
 
 PARSERS = [PalgraveEPUBParser, CambridgeCoreParser]
+MIXIN_PARSERS = [CermineParserMixin, CrossrefParserMixin]

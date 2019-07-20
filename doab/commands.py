@@ -200,3 +200,10 @@ def match_reference(reference=None):
         book_id, title = matched
         print (f"{i}. {book_id} - {title}")
     return matches
+
+
+def print_parsers():
+    from doab import reference_parsers
+    print('Single citation parsers:')
+    for parser in reference_parsers.MIXIN_PARSERS:
+        print(parser.PARSER_NAME)
