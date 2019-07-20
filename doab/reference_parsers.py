@@ -229,36 +229,35 @@ class CermineParserMixin(SubprocessParserMixin):
 class PublisherSpecificMixin(object):
     # magic value of 'all' will always return true
     PUBLISHER_NAMES = []
+    FILE_TYPES = []
+
+    def __init__(self, book_id, book_path, *args, **kwargs):
+        super().__init__(book_id, book_path, *args, **kwargs)
 
     @classmethod
-    def can_handle(self, book_id):
-        if 'all' in self.PUBLISHER_NAMES:
+    def can_handle(cls, book, input_path):
+        if 'all' in cls.PUBLISHER_NAMES:
             return True
 
-        with session_context() as session:
-            try:
-                book = session.query(
-                    models.Book
-                ).filter(models.Book.doab_id == book_id).one()
-
-                if book.publisher in self.PUBLISHER_NAMES:
-                    return True
-                else:
-                    return False
-
-            except NoResultFound:
-                return False
+        if book.publisher in cls.PUBLISHER_NAMES:
+            if 'epub' in cls.FILE_TYPES:
+                return EPUBFileManager(os.path.join(input_path, book.doab_id, "book.epub")).is_epub
+            else:
+                return True
+        else:
+            return False
 
 
 class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
     HTML_FILTER = ("div", {"class": "CitationContent"})
     PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
+    FILE_TYPES = ['epub']
 
 
-def yield_parsers(book_id):
+def yield_parsers(book, input_path):
     parsers = []
     for parser in PARSERS:
-        if parser.can_handle(book_id):
+        if parser.can_handle(book, input_path):
             parsers.append(parser)
     return parsers
 

@@ -34,7 +34,7 @@ def print_books(input_path):
                     models.Book
                 ).filter(models.Book.doab_id == book_id).one()
 
-                print(book.citation)
+                print(book.citation(input_path))
 
             except NoResultFound:
                 print('Book with ID: {0}'.format(book_id))
@@ -165,7 +165,6 @@ def parse_references(input_path, book_ids=None, workers=0):
 def parse_reference(book_id, input_path):
     path = os.path.join(input_path, str(book_id))
     with session_context() as session:
-
 
         try:
             # fetch book metadata

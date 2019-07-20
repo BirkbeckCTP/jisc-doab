@@ -14,6 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
+from doab import const
+from doab.files import EPUBFileManager
 from doab.reference_parsers import yield_parsers
 
 Base = declarative_base()
@@ -60,19 +62,26 @@ class Book(Base):
     identifiers = relationship("Identifier", backref="book")
     referrers = relationship("Reference", backref="match")
 
-    @property
-    def parsers(self):
-        return yield_parsers(self.doab_id)
+    def parsers(self, input_path=const.DEFAULT_OUT_DIR):
+        return yield_parsers(self, input_path)
 
     @property
-    def citation(self):
+    def has_epub(self):
+        return self.has_extension('.epub')
+
+    def has_extension(self, extension):
+        # TODO: this will break if the user has used a directory that is different to the default
+        file_manager = EPUBFileManager(os.path.join(book_path, "book.epub"))
+        pass
+
+    def citation(self, input_path=const.DEFAULT_OUT_DIR):
         output = ''
         for author in self.authors:
             output += '{0}{1}{2} {3}, '.format(author.first_name,
                                                ' ' if author.middle_name and author.middle_name != '' else '',
                                                author.middle_name, author.last_name)
         output += self.title
-        output += ' ({0}). Handled by: {1}. ID: {2}'.format(self.publisher, self.parsers, self.doab_id)
+        output += ' ({0}). Handled by: {1}. ID: {2}'.format(self.publisher, self.parsers(input_path), self.doab_id)
 
         return output
 

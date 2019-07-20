@@ -59,7 +59,12 @@ class FileManager():
 class EPUBFileManager(FileManager):
     def __init__(self, base_path):
         super().__init__(base_path)
-        self.epub_file = epub.read_epub(base_path)
+        self.epub_filename = base_path
+        self.epub_file = None
+
+    @property
+    def is_epub(self):
+        return True if os.path.exists(self.epub_filename) else False
 
     def read(self, filename=None, mime=None):
         """Returns the contents of the epub file
@@ -68,6 +73,9 @@ class EPUBFileManager(FileManager):
         :return: The contents of a file or an iterable of tuples
             of the format (filename, contents)
         """
+        if not self.epub_file:
+            self.epub_file = epub.read_epub(self.epub_filename) if os.path.exists(self.epub_filename) else None
+
         for item in self.epub_file.items:
             name = item.get_name()
             if filename:
@@ -84,6 +92,9 @@ class EPUBFileManager(FileManager):
 
         :return: A list of tuples of the format (MIME, filename)
         """
+        if not self.epub_file:
+            self.epub_file = epub.read_epub(self.epub_filename) if os.path.exists(self.epub_filename) else None
+
         return [
             (item.media_type, item.get_name())
             for item in self.epub_file.items
