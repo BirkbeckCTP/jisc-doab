@@ -165,6 +165,8 @@ def parse_references(input_path, book_ids=None, workers=0):
 def parse_reference(book_id, input_path):
     path = os.path.join(input_path, str(book_id))
     with session_context() as session:
+
+
         try:
             # fetch book metadata
             try:
@@ -175,7 +177,7 @@ def parse_reference(book_id, input_path):
                 for parser in book.parsers:
                     logger.debug("Running parser {0} for book {1}.".format(parser, book_id))
                     parser_for_book = parser(book_id, path)
-                    parser.run(session)
+                    parser_for_book.run(session)
 
             except NoResultFound:
                 publisher = None

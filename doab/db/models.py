@@ -72,7 +72,7 @@ class Book(Base):
                                                ' ' if author.middle_name and author.middle_name != '' else '',
                                                author.middle_name, author.last_name)
         output += self.title
-        output += ' ({0}). Handled by: {1}'.format(self.publisher, self.parsers)
+        output += ' ({0}). Handled by: {1}. ID: {2}'.format(self.publisher, self.parsers, self.doab_id)
 
         return output
 
