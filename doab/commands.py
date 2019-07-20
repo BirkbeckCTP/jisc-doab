@@ -164,8 +164,8 @@ def parse_references(input_path, book_ids=None, workers=0):
 
 def parse_reference(book_id, input_path):
     path = os.path.join(input_path, str(book_id))
-    with session_context() as session:
 
+    with session_context() as session:
         try:
             # fetch book metadata
             try:
@@ -184,13 +184,7 @@ def parse_reference(book_id, input_path):
                     logger.debug(f'No appropriate parser found for {book_id}.')
 
             except NoResultFound:
-                publisher = None
-
-            # match publisher to parser
-            if publisher:
-                pass
-            else:
-                logger.debug("No publisher info for {0} so unable to match to parser.".format(book_id))
+                logger.error(f'Error retrieving book {book_id}.')
 
         except FileNotFoundError as e:
             logger.debug(f"No book.epub available: {e}")

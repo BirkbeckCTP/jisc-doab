@@ -1,3 +1,4 @@
+import json
 import re
 from itertools import chain
 import logging
@@ -155,6 +156,90 @@ class HTTPBasedParserMixin(BaseReferenceParser):
         return response
 
 
+class CambridgeCoreMixin(BaseReferenceParser):
+    HTML_FILTER = (None, None)
+    PARSER_NAME = ''
+
+    def __init__(self, book_id, book_path, *args, **kwargs):
+        super().__init__(book_id, book_path, *args, **kwargs)
+        self.file_manager = FileManager(os.path.join(book_path, const.RECOGNIZED_BOOK_TYPES['CambridgeCore']))
+
+    def prepare(self):
+        content = self.file_manager.read()
+
+        # see if we can get an openresolver set to evaluate
+        openresolver_regex = r'var openResolverFullReferences = (\[.+\]);'
+        or_matches = re.search(openresolver_regex, content, re.MULTILINE)
+
+        if or_matches:
+            logger.debug('Using OpenReference variable match')
+            reference_list = json.loads(or_matches.group(1))
+
+            for ref in reference_list:
+                # TODO: note, this seems _very_ slow
+                self.references[json.dumps(ref)] = []
+        else:
+            logger.debug('Using soup fallback method')
+            soup = BeautifulSoup(content, "html.parser")
+            self.process_soup(soup)
+
+    def parse(self):
+        for ref in self.references:
+            parsed = self.parse_reference(ref)
+            logger.debug(f'Parsed: {parsed}')
+            self.references[ref].append((self.PARSER_NAME, parsed))
+
+    def parse_reference(cls, reference):
+        reference_json = json.loads(reference)
+
+        formatted_reference = {}
+
+        # year
+        formatted_reference['year'] = reference_json['atom:content']['m:pub-year']
+
+        # title
+        if reference_json['atom:content']['m:title'] is not None \
+                and reference_json['atom:content']['m:title'] != '':
+            formatted_reference['title'] = reference_json['atom:content']['m:title']
+        elif reference_json['atom:content']['m:book-title'] is not None \
+                and reference_json['atom:content']['m:book-title'] != '':
+            formatted_reference['title'] = reference_json['atom:content']['m:book-title']
+
+        # log the raw reference
+        formatted_reference['raw_reference'] = reference_json['atom:content']['m:display']
+
+        # journal
+        if reference_json['atom:content']['m:journal-title'] != '' \
+                and reference_json['atom:content']['m:journal-title'] is not None:
+            formatted_reference['journal'] = reference_json['atom:content']['m:journal-title']
+
+        # authors
+        formatted_reference['authors'] = ''
+        for author in reference_json['atom:content']['m:authors']:
+            formatted_reference['authors'] += f'{author["content"]}, '
+
+        # DOI where it exists
+        if reference_json['atom:content']['m:dois'] is not None \
+                and len(reference_json['atom:content']['m:dois']) > 0 \
+                and reference_json['atom:content']['m:dois'][0]['content'] != '':
+            formatted_reference['doi'] = reference_json['atom:content']['m:dois'][0]['content']
+
+        # volume
+        if reference_json['atom:content']['m:journal-volume'] != '' and \
+                reference_json['atom:content']['m:journal-volume'] is not None:
+            formatted_reference['volume'] = reference_json['atom:content']['m:journal-volume']
+
+        formatted_reference['parser'] = cls.PARSER_NAME
+
+        return formatted_reference
+
+    def process_soup(self, soup):
+        tag, attributes = self.HTML_FILTER
+        for ref in soup.find_all(name=tag, attrs=attributes):
+            clean = self.clean(ref['content'])
+            self.references[clean] = []
+
+
 class EPUBPrepareMixin(BaseReferenceParser):
     HTML_FILTER = (None, None)
 
@@ -252,23 +337,19 @@ class PublisherSpecificMixin(object):
 
 
 class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
-    def __str__(self):
-        return "Palgrave EPub"
-
     HTML_FILTER = ("div", {"class": "CitationContent"})
     PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
     FILE_TYPES = ['epub']
+    PARSER_NAME = 'Palgrave Epub'
 
 
-class CambridgeCoreParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
-    def __str__(self):
-        return "Cambridge Core"
-
+class CambridgeCoreParser(CambridgeCoreMixin, PublisherSpecificMixin):
     # <meta name = "citation_reference" content = "citation_title=title; citation_author=author;
     # citation_publication_date=1990" >
     HTML_FILTER = ("meta", {"name": "citation_reference"})
     PUBLISHER_NAMES = ['{"Cambridge University Press"}']
     FILE_TYPES = ['CambridgeCore']
+    PARSER_NAME = 'Cambridge Core'
 
 
 def yield_parsers(book, input_path):
