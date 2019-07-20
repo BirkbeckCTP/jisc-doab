@@ -184,9 +184,9 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
     def parse(self):
         # using the Crossref approved single DOI: https://www.crossref.org/blog/dois-and-matching-regular-expressions/
         # 'for the 74.9M DOIs we have seen this matches 74.4M of them'
-        cross_doi_re = re.compile(r'/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i')
+        crossref_doi_re = re.compile(r'/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i')
         for ref, parse in self.references.items():
-            crossref_match = cross_doi_re.search(ref)
+            crossref_match = crossref_doi_re.search(ref)
             if crossref_match:
                 logger.debug(crossref_match)
 

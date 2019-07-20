@@ -15,7 +15,7 @@ from doab.reference_matching import match
 from doab.reference_parsers import (
     CermineParserMixin,
     PalgraveEPUBParser,
-)
+    CrossrefParserMixin)
 from doab import tasker
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 def print_publishers():
     for pub in const.Publisher:
         print(f"{pub.value}\t{pub.name}")
+
 
 def list_extracted_books(path):
     file_manager = FileManager(path)
@@ -52,6 +53,7 @@ def db_populator(input_path, book_ids=None, workers=0):
     reader = FileManager(input_path)
     msg = "Populating DB records for book "
     tasker.run(populate_db, book_ids, msg, workers, reader)
+
 
 def populate_db(book_id, reader):
         try:
@@ -124,6 +126,7 @@ def process_author_str(author):
 
     return standarised_name, first_name, middle_name, last_name, reference_name
 
+
 def upsert_identifier(session, identifier_str):
     """ Updates/Inserts an identifier from its DOAB identifier string
 
@@ -136,6 +139,7 @@ def upsert_identifier(session, identifier_str):
     except NoResultFound:
         identifier = models.Identifier(value=identifier_str)
     return identifier
+
 
 def parse_references(input_path, book_ids=None, workers=0):
     if not book_ids:
@@ -165,4 +169,3 @@ def match_reference(reference=None):
         book_id, title = matched
         print (f"{i}. {book_id} - {title}")
     return matches
-

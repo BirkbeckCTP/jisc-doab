@@ -1,3 +1,4 @@
+import re
 from itertools import chain
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -14,8 +15,10 @@ def match(reference):
 
 def match_by_doi(reference):
     matches = []
+
     if "doi" not in reference or reference["doi"] is None:
         return matches
+
     with session_context() as session:
         parses_matching = session.query(
                 models.ParsedReference
@@ -23,6 +26,7 @@ def match_by_doi(reference):
                 models.ParsedReference.doi == reference["doi"],
             )
     return chain.from_iterable(p.reference.books for p in parses_matching)
+
 
 def match_title_exact(reference):
     if "title" not in reference or reference["title"] is None:
@@ -34,6 +38,7 @@ def match_title_exact(reference):
             models.ParsedReference.title == reference["title"],
         )
     return chain.from_iterable(p.reference.books for p in parses_matching)
+
 
 def match_title_fuzzy(reference):
     #TODO: Add weighting by match score
