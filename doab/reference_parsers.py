@@ -33,9 +33,6 @@ class BaseReferenceParser(object):
         self.book_id = str(book_id)
         self.references = {}
 
-    def __str__(self):
-        return f"<test>"
-
     def prepare(self):
         """ Routines to be run in preparation to parsing the references
 
@@ -238,6 +235,7 @@ class PublisherSpecificMixin(object):
     @classmethod
     def can_handle(cls, book, input_path):
         if 'all' in cls.PUBLISHER_NAMES:
+            print(f'The {cls} parser will handle {book.doab_id}')
             return True
 
         if book.publisher in cls.PUBLISHER_NAMES:
@@ -247,15 +245,30 @@ class PublisherSpecificMixin(object):
                 if filetype not in filetypes:
                     return False
 
+            logger.debug(f'{cls} parser can handle {book.doab_id}')
             return True
         else:
             return False
 
 
 class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
+    def __str__(self):
+        return "Palgrave EPub"
+
     HTML_FILTER = ("div", {"class": "CitationContent"})
     PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
     FILE_TYPES = ['epub']
+
+
+class CambridgeCoreParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
+    def __str__(self):
+        return "Cambridge Core"
+
+    # <meta name = "citation_reference" content = "citation_title=title; citation_author=author;
+    # citation_publication_date=1990" >
+    HTML_FILTER = ("meta", {"name": "citation_reference"})
+    PUBLISHER_NAMES = ['{"Cambridge University Press"}']
+    FILE_TYPES = ['CambridgeCore']
 
 
 def yield_parsers(book, input_path):
@@ -266,4 +279,4 @@ def yield_parsers(book, input_path):
     return parsers
 
 
-PARSERS = [PalgraveEPUBParser]
+PARSERS = [PalgraveEPUBParser, CambridgeCoreParser]
