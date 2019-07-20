@@ -1,3 +1,4 @@
+import re
 from itertools import chain
 import logging
 import os
@@ -54,7 +55,6 @@ class BaseReferenceParser(object):
     @classmethod
     def parse_reference(cls, reference):
         return None
-
 
     def persist(self, session):
         """ Persists parse results to the database
@@ -178,10 +178,26 @@ class EPUBPrepareMixin(BaseReferenceParser):
 class CrossrefParserMixin(HTTPBasedParserMixin):
     """A parser that matches DOIS and retrieves metadata via Crossref API"""
 
+    def prepare(self):
+        pass
+
     def parse(self):
+        # using the Crossref approved single DOI: https://www.crossref.org/blog/dois-and-matching-regular-expressions/
+        # 'for the 74.9M DOIs we have seen this matches 74.4M of them'
+        cross_doi_re = re.compile(r'/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i')
         for ref, parse in self.references.items():
-            pass
-            # TODO: match a doi on the reference and prepare http request
+            crossref_match = cross_doi_re.search(ref)
+            if crossref_match:
+                logger.debug(crossref_match)
+
+    @classmethod
+    def parse_reference(cls, reference, bibtex_parser=None):
+        if bibtex_parser is None:
+            bibtex_parser = BibTexParser()
+        #bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
+        #logger.debug(f"Bibtex {bibtex_reference}")
+        #return bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+        return None
 
 
 class CermineParserMixin(SubprocessParserMixin):
