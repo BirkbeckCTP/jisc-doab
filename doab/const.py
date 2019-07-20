@@ -9,6 +9,8 @@ DOAB_OAI_ENDPOINT = DOAB_URL + "/oai"
 
 DEFAULT_OUT_DIR = os.getenv("DOAB_DEFAULT_OUT_DIR", "volumes/out")
 
+RECOGNIZED_BOOK_TYPES = {'epub': 'book.epub',
+                         'pdf': 'book.pdf'}
 
 class Publisher(Enum):
     CAMBRIDGE_UNIVERSITY_PRESS = 1244

@@ -7,10 +7,11 @@ import subprocess
 
 from bs4 import BeautifulSoup
 from bibtexparser.bparser import BibTexParser
+from doab import const
 from sqlalchemy.orm.exc import NoResultFound
 import requests
 
-from doab.files import EPUBFileManager
+from doab.files import EPUBFileManager, FileManager
 from doab.db import models, session_context
 
 logger = logging.getLogger(__name__)
@@ -162,7 +163,7 @@ class EPUBPrepareMixin(BaseReferenceParser):
 
     def __init__(self, book_id, book_path, *args, **kwargs):
         super().__init__(book_id, book_path, *args, **kwargs)
-        self.file_manager = EPUBFileManager(os.path.join(book_path, "book.epub"))
+        self.file_manager = EPUBFileManager(os.path.join(book_path, const.RECOGNIZED_BOOK_TYPES['epub']))
 
     def prepare(self):
         for _, content in self.file_manager.read(mime="application/xhtml+xml"):
@@ -240,10 +241,13 @@ class PublisherSpecificMixin(object):
             return True
 
         if book.publisher in cls.PUBLISHER_NAMES:
-            if 'epub' in cls.FILE_TYPES:
-                return EPUBFileManager(os.path.join(input_path, book.doab_id, "book.epub")).is_epub
-            else:
-                return True
+            filetypes = FileManager(os.path.join(input_path, book.doab_id)).types
+
+            for filetype in cls.FILE_TYPES:
+                if filetype not in filetypes:
+                    return False
+
+            return True
         else:
             return False
 

@@ -3,12 +3,14 @@ from operator import itemgetter
 import os
 import zipfile
 
+from doab import const
 from ebooklib import epub
 
 logger = logging.getLogger(__name__)
 
 
 class FileManager():
+
     def __init__(self, base_path):
         if not base_path.startswith("/"):
             base_path = os.path.join(os.getcwd(), base_path)
@@ -56,15 +58,22 @@ class FileManager():
     def _get_zipfile(self, path, mode="r"):
         return zipfile.ZipFile(path, mode)
 
+    @property
+    def types(self):
+        return_types = []
+
+        for filetype, filename in const.RECOGNIZED_BOOK_TYPES.items():
+            if os.path.exists(os.path.join(self.base_path, filename)):
+                return_types.append(filetype)
+
+        return return_types
+
+
 class EPUBFileManager(FileManager):
     def __init__(self, base_path):
         super().__init__(base_path)
         self.epub_filename = base_path
-        self.epub_file = None
-
-    @property
-    def is_epub(self):
-        return True if os.path.exists(self.epub_filename) else False
+        self.epub_file = epub.read_epub(self.epub_filename)
 
     def read(self, filename=None, mime=None):
         """Returns the contents of the epub file
@@ -73,9 +82,6 @@ class EPUBFileManager(FileManager):
         :return: The contents of a file or an iterable of tuples
             of the format (filename, contents)
         """
-        if not self.epub_file:
-            self.epub_file = epub.read_epub(self.epub_filename) if os.path.exists(self.epub_filename) else None
-
         for item in self.epub_file.items:
             name = item.get_name()
             if filename:
@@ -92,9 +98,6 @@ class EPUBFileManager(FileManager):
 
         :return: A list of tuples of the format (MIME, filename)
         """
-        if not self.epub_file:
-            self.epub_file = epub.read_epub(self.epub_filename) if os.path.exists(self.epub_filename) else None
-
         return [
             (item.media_type, item.get_name())
             for item in self.epub_file.items

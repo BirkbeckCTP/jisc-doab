@@ -65,15 +65,6 @@ class Book(Base):
     def parsers(self, input_path=const.DEFAULT_OUT_DIR):
         return yield_parsers(self, input_path)
 
-    @property
-    def has_epub(self):
-        return self.has_extension('.epub')
-
-    def has_extension(self, extension):
-        # TODO: this will break if the user has used a directory that is different to the default
-        file_manager = EPUBFileManager(os.path.join(book_path, "book.epub"))
-        pass
-
     def citation(self, input_path=const.DEFAULT_OUT_DIR):
         output = ''
         for author in self.authors:
