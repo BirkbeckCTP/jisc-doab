@@ -58,6 +58,22 @@ class Book(Base):
     identifiers = relationship("Identifier", backref="book")
     referrers = relationship("Reference", backref="match")
 
+    @property
+    def citation(self):
+        output = ''
+
+        for author in self.authors:
+            output += '{0}{1}{2} {3}, '.format(author.first_name,
+                                               ' ' if author.middle_name and author.middle_name != '' else '',
+                                               author.middle_name, author.last_name)
+
+        output += self.title
+
+        output += ' ({0})'.format(self.publisher)
+        return output
+
+
+
     def update_with_metadata(self, metadata):
         self.title = metadata["title"],
         self.description = metadata["description"]

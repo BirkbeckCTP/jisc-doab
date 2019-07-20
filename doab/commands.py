@@ -27,8 +27,17 @@ def print_publishers():
 
 
 def print_books(input_path):
-    for book in list_extracted_books(input_path):
-        print(book)
+    with session_context() as session:
+        for book_id in list_extracted_books(input_path):
+            try:
+                book = session.query(
+                    models.Book
+                ).filter(models.Book.doab_id == book_id).one()
+
+                print(book.citation)
+
+            except NoResultFound:
+                print('Book with ID: {0}'.format(book_id))
 
 
 def list_extracted_books(path):
