@@ -24,7 +24,8 @@ setuptools.setup(
         "ebooklib",
         "alembic",
         "colorlog",
-        "doi2bib"
+        "doi2bib",
+        "docopt"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

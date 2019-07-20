@@ -1,8 +1,26 @@
-import argparse
+"""Jisc Open Monographs Metrics Experiment.
+
+Usage:
+  cli.py extract_texts [--output_path=PATH] [--publisher_id=ID] [--threads=THREAD] [options]
+  cli.py import_metadata [--input_path=PATH] [--threads=THREAD] [--book_id=BOOK_IDS...] [options]
+  cli.py parse_references [--input_path=PATH] [--threads=THREAD] [--book_id=BOOK_IDS...] [options]
+  cli.py match_reference <reference> [--input_path=PATH] [options]
+  cli.py list_publishers [options]
+  cli.py list_books [--input_path=PATH] [options]
+
+  cli.py (-h | --help)
+  cli.py --version
+
+Options:
+  -d --debug    Enable debug mode
+
+"""
 import sys
-from timeit import default_timer as timer
 
 from doab import const
+from docopt import docopt
+from doab.config import init_logging
+
 from doab.commands import (
     extractor,
     print_publishers,
@@ -11,59 +29,39 @@ from doab.commands import (
     match_reference,
     print_books,
 )
-from doab.config import init_logging
 
-#
-## Const
-#
 
-# Commands
-EXTRACT_CMD = "extract"
-PUBLISHERS_CMD = "publishers"
-BOOKS_CMD = "books"
-POPULATOR_CMD = "populate"
-PARSE_CMD = "parse"
-MATCH_CMD = "match"
+def run():
+    args = docopt(__doc__, version='Jisc Open Monographs Metrics Experiment 1.0')
+    init_logging(args['--debug'])
 
-# Argument names
-PUBLISHER_ID = "publisher_id"
-OUTPUT_PATH = "output_path"
-INPUT_PATH = "input_path"
-THREADING = "threads"
-BOOK_IDS = "book_ids"
-REFERENCE = "citation"
+    # normalize arguments
+    if not args['--output_path']:
+        args['--output_path'] = const.DEFAULT_OUT_DIR
 
-# Arguments
+    if not args['--input_path']:
+        args['--input_path'] = const.DEFAULT_OUT_DIR
 
-BOOK_IDS_ARG = (
-    ("-b", f"--{BOOK_IDS}"),
-    {"help": "A list of book ids for which to populate their db records. "
-        "If not provided, all books found in the input path will be processed ",
-    "nargs": "+",
-    "type": int,
-    "dest": BOOK_IDS},
-)
+    if not args['--threads']:
+        args['--threads'] = 0
 
-INPUT_PATH_ARG = (
-    ("-i", f"--{INPUT_PATH}"),
-    {"help": f"Path to the desired input directory, defaults to "
-        "`pwd`/{const.DEFAULT_OUT_DIR}",
-    "default": f"{const.DEFAULT_OUT_DIR}",
-    "dest" : INPUT_PATH},
-)
+    if not args['--publisher_id']:
+        args['--publisher_id'] = 'all'
 
-THREADING_ARG = (
-    ("-t", f"--{THREADING}"),
-    {"help": f"Number of maximum threads to fork for this command. If not "
-        "provided it will run single-threaded",
-    "default": 0,
-     "type": int,
-    "dest" : THREADING},
-)
-
-#
-## Validators
-#
+    # select the action
+    if args['extract_texts']:
+        publisher_validator(args['--publisher_id'])
+        extractor(args['--publisher_id'], args['--output_path'], args['--threads'])
+    elif args['list_publishers']:
+        print_publishers()
+    elif args['list_books']:
+        print_books(args['--input_path'])
+    elif args['import_metadata']:
+        db_populator(args['--input_path'], args['--book_id'], args['--threads'])
+    elif args['parse_references']:
+        parse_references(args['--input_path'], args['--book_id'], args['--threads'])
+    elif args['match_reference']:
+        match_reference(args['<reference>'])
 
 
 def publisher_validator(arg):
@@ -76,159 +74,15 @@ def publisher_validator(arg):
                 "database. Proceed? [y/N]: "
             )
         if response.lower() == "n":
-            exit()
+            sys.exit(0)
 
     elif arg.isdigit():
         arg = int(arg)
     else:
-        raise argparse.ArgumentTypeError(
-            "'%s' is not a valid publisher id" % arg
-        )
+        print("'%s' is not a valid publisher id" % arg)
 
     return arg
 
 
-def string_is_digit(arg):
-    if not arg.is_digit():
-        raise argparse.ArgumentTypeError(
-            "'%s' is not a valid book id" % arg
-        )
-    return int(arg)
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-d", "--debug",
-    help="Sets debug mode on",
-    action="store_true",
-    default=False,
-)
-
-subparsers = parser.add_subparsers(help="commands", dest="incantation")
-#
-## Extractor parser
-#
-extract_parser = subparsers.add_parser(
-    EXTRACT_CMD,
-    help="Tool for extraction of corpus and metadata from DOAB",
-)
-extract_parser.add_argument(
-    f"{PUBLISHER_ID}",
-    help="The identifier for the publisher in DOAB",
-    type=publisher_validator
-)
-extract_parser.add_argument(
-    "-o", f"--{OUTPUT_PATH}",
-    help=f"Path to the desired ouput directory, defaults to "
-        "`pwd`/{const.DEFAULT_OUT_DIR} ",
-    default=f"{const.DEFAULT_OUT_DIR}",
-)
-
-#
-## Publisher parser
-#
-
-publishers_parser = subparsers.add_parser(
-    PUBLISHERS_CMD,
-    help="Prints a list of all the supported publishers",
-)
-
-#
-## Book list parser
-#
-
-books_parser = subparsers.add_parser(
-    BOOKS_CMD,
-    help="Prints a list of all downloaded books",
-)
-
-books_parser.add_argument(
-    "-o", f"--{OUTPUT_PATH}",
-    help=f"Path to the desired ouput directory, defaults to "
-        "`pwd`/{const.DEFAULT_OUT_DIR} ",
-    default=f"{const.DEFAULT_OUT_DIR}",
-)
-
-books_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
-
-#
-## DB Populator parser
-#
-
-populator_parser = subparsers.add_parser(
-    POPULATOR_CMD,
-    help="Populates the database with the metadata extracted with `extract`",
-)
-populator_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
-populator_parser.add_argument(*BOOK_IDS_ARG[0], **BOOK_IDS_ARG[1])
-populator_parser.add_argument(*THREADING_ARG[0], **THREADING_ARG[1])
-
-
-#
-## Reference parsing parser
-#
-parse_parser = subparsers.add_parser(
-    PARSE_CMD,
-    help="Parses the references for the provided book IDs",
-)
-parse_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
-parse_parser.add_argument(*BOOK_IDS_ARG[0], **BOOK_IDS_ARG[1])
-parse_parser.add_argument(*THREADING_ARG[0], **THREADING_ARG[1])
-
-#
-## Reference matching parser
-#
-match_parser = subparsers.add_parser(
-    MATCH_CMD,
-    help="Tries to match the given reference with a book",
-)
-match_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
-match_parser.add_argument(
-    f"{REFERENCE}",
-    help="A Citation to be matched against the local database",
-)
-
-COMMANDS_MAP = {
-    EXTRACT_CMD: (
-        extractor,
-        (PUBLISHER_ID, OUTPUT_PATH),
-    ),
-    POPULATOR_CMD: (
-        db_populator,
-        (INPUT_PATH, BOOK_IDS, THREADING),
-    ),
-    PARSE_CMD: (
-        parse_references,
-        (INPUT_PATH, BOOK_IDS, THREADING),
-    ),
-     MATCH_CMD: (
-        match_reference,
-        (REFERENCE,),
-     ),
-    PUBLISHERS_CMD: (print_publishers, ""),
-    BOOKS_CMD: (print_books, (INPUT_PATH,)),
-}
-
-
-def run():
-    args = parser.parse_args()
-    init_logging(args.debug)
-
-    if args.incantation not in COMMANDS_MAP:
-        parser.print_help()
-    else:
-        command, arg_names = COMMANDS_MAP[args.incantation]
-        start = timer()
-        command(*(getattr(args, arg) for arg in arg_names))
-        end = timer()
-        if args.debug:
-            print(end - start)
-
-
-def exit():
-    print("Bye!")
-    sys.exit(0)
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     run()
