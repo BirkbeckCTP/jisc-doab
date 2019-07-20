@@ -26,6 +26,11 @@ def print_publishers():
         print(f"{pub.value}\t{pub.name}")
 
 
+def print_books(input_path):
+    for book in list_extracted_books(input_path):
+        print(book)
+
+
 def list_extracted_books(path):
     file_manager = FileManager(path)
     return file_manager.list()

@@ -9,6 +9,7 @@ from doab.commands import (
     db_populator,
     parse_references,
     match_reference,
+    print_books,
 )
 from doab.config import init_logging
 
@@ -19,6 +20,7 @@ from doab.config import init_logging
 # Commands
 EXTRACT_CMD = "extract"
 PUBLISHERS_CMD = "publishers"
+BOOKS_CMD = "books"
 POPULATOR_CMD = "populate"
 PARSE_CMD = "parse"
 MATCH_CMD = "match"
@@ -65,7 +67,7 @@ THREADING_ARG = (
 
 
 def publisher_validator(arg):
-    """ Ensures that the publihser id argument is either an int or 'all' """
+    """ Ensures that the publisher id argument is either an int or 'all' """
     if arg == "all":
         response = ""
         while response.lower() not in {"y", "n"}:
@@ -84,6 +86,7 @@ def publisher_validator(arg):
         )
 
     return arg
+
 
 def string_is_digit(arg):
     if not arg.is_digit():
@@ -129,6 +132,24 @@ publishers_parser = subparsers.add_parser(
     PUBLISHERS_CMD,
     help="Prints a list of all the supported publishers",
 )
+
+#
+## Book list parser
+#
+
+books_parser = subparsers.add_parser(
+    BOOKS_CMD,
+    help="Prints a list of all downloaded books",
+)
+
+books_parser.add_argument(
+    "-o", f"--{OUTPUT_PATH}",
+    help=f"Path to the desired ouput directory, defaults to "
+        "`pwd`/{const.DEFAULT_OUT_DIR} ",
+    default=f"{const.DEFAULT_OUT_DIR}",
+)
+
+books_parser.add_argument(*INPUT_PATH_ARG[0], **INPUT_PATH_ARG[1])
 
 #
 ## DB Populator parser
@@ -184,7 +205,8 @@ COMMANDS_MAP = {
         match_reference,
         (REFERENCE,),
      ),
-       PUBLISHERS_CMD: (print_publishers, ""),
+    PUBLISHERS_CMD: (print_publishers, ""),
+    BOOKS_CMD: (print_books, (INPUT_PATH,)),
 }
 
 

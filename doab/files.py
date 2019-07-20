@@ -32,6 +32,7 @@ class FileManager():
         li = os.listdir(os.path.join(self.base_path, *path_parts))
         if not hidden:
             return [i for i in li if not i.startswith(".")]
+
     def read(self, *path_parts, mode=""):
         read_path = os.path.join(self.base_path, *path_parts)
         with open(read_path, f"r{mode}") as read_file:
