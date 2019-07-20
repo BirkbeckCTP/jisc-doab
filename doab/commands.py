@@ -171,12 +171,17 @@ def parse_reference(book_id, input_path):
             try:
                 book = session.query(
                     models.Book
-                ).filter(models.Book.doab_id == book_id).one()
+                ).filter(models.Book.doab_id == str(book_id)).one()
 
-                for parser in book.parsers:
-                    logger.debug("Running parser {0} for book {1}.".format(parser, book_id))
-                    parser_for_book = parser(book_id, path)
-                    parser_for_book.run(session)
+                parsers = book.parsers(input_path)
+
+                if parsers:
+                    for parser in parsers:
+                        logger.debug("Running parser {0} for book {1}.".format(parser, book_id))
+                        parser_for_book = parser(book_id, path)
+                        parser_for_book.run(session)
+                else:
+                    logger.debug(f'No appropriate parser found for {book_id}.')
 
             except NoResultFound:
                 publisher = None
