@@ -166,9 +166,25 @@ def parse_reference(book_id, input_path):
     path = os.path.join(input_path, str(book_id))
     with session_context() as session:
         try:
-            #TODO map publisher to parser
-            parser = PalgraveEPUBParser(book_id, path)
-            parser.run(session)
+            # fetch book metadata
+            try:
+                book = session.query(
+                    models.Book
+                ).filter(models.Book.doab_id == book_id).one()
+
+                for parser in book.parsers:
+                    parser_for_book = parser(book_id, path)
+                    parser.run(session)
+
+            except NoResultFound:
+                publisher = None
+
+            # match publisher to parser
+            if publisher:
+                pass
+            else:
+                logger.debug(f"No publisher info for {0} so unable to match to parser.".format(book_id))
+
         except FileNotFoundError as e:
             logger.debug(f"No book.epub available: {e}")
 

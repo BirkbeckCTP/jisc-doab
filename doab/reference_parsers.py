@@ -11,7 +11,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import requests
 
 from doab.files import EPUBFileManager
-from doab.db import models
+from doab.db import models, session_context
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +159,7 @@ class HTTPBasedParserMixin(BaseReferenceParser):
 
 class EPUBPrepareMixin(BaseReferenceParser):
     HTML_FILTER = (None, None)
+
     def __init__(self, book_id, book_path, *args, **kwargs):
         super().__init__(book_id, book_path, *args, **kwargs)
         self.file_manager = EPUBFileManager(os.path.join(book_path, "book.epub"))
@@ -225,5 +226,37 @@ class CermineParserMixin(SubprocessParserMixin):
         return bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
 
 
-class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin):
+class PublisherSpecificMixin(object):
+    PUBLISHER_NAMES = []
+
+    @classmethod
+    def can_handle(self, book_id):
+        with session_context() as session:
+            try:
+                book = session.query(
+                    models.Book
+                ).filter(models.Book.doab_id == book_id).one()
+
+                if book.publisher in self.PUBLISHER_NAMES:
+                    return True
+                else:
+                    return False
+
+            except NoResultFound:
+                return False
+
+
+class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
     HTML_FILTER = ("div", {"class": "CitationContent"})
+    PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
+
+
+def yield_parsers(book_id):
+    parsers = []
+    for parser in PARSERS:
+        if parser.can_handle(book_id):
+            parsers.append(parser)
+    return parsers
+
+
+PARSERS = [PalgraveEPUBParser]

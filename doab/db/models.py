@@ -14,6 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
+from doab.reference_parsers import yield_parsers
+
 Base = declarative_base()
 
 book_author = Table("book_author", Base.metadata,
@@ -59,20 +61,20 @@ class Book(Base):
     referrers = relationship("Reference", backref="match")
 
     @property
+    def parsers(self):
+        return yield_parsers(self.doab_id)
+
+    @property
     def citation(self):
         output = ''
-
         for author in self.authors:
             output += '{0}{1}{2} {3}, '.format(author.first_name,
                                                ' ' if author.middle_name and author.middle_name != '' else '',
                                                author.middle_name, author.last_name)
-
         output += self.title
+        output += ' ({0}). Handled by: {1}'.format(self.publisher, self.parsers)
 
-        output += ' ({0})'.format(self.publisher)
         return output
-
-
 
     def update_with_metadata(self, metadata):
         self.title = metadata["title"],
