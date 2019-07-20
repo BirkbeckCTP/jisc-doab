@@ -227,10 +227,14 @@ class CermineParserMixin(SubprocessParserMixin):
 
 
 class PublisherSpecificMixin(object):
+    # magic value of 'all' will always return true
     PUBLISHER_NAMES = []
 
     @classmethod
     def can_handle(self, book_id):
+        if 'all' in self.PUBLISHER_NAMES:
+            return True
+
         with session_context() as session:
             try:
                 book = session.query(
