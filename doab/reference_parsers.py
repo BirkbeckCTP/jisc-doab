@@ -364,3 +364,11 @@ def yield_parsers(book, input_path):
 
 PARSERS = [PalgraveEPUBParser, CambridgeCoreParser]
 MIXIN_PARSERS = [CermineParserMixin, CrossrefParserMixin]
+
+
+def get_parser_by_name(parser):
+    for parse_class in MIXIN_PARSERS:
+        if parse_class.PARSER_NAME == parser:
+            return parse_class
+
+    return None

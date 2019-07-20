@@ -4,7 +4,7 @@ Usage:
   cli.py extract_texts [--output_path=PATH] [--publisher_id=ID] [--threads=THREAD] [options]
   cli.py import_metadata [--input_path=PATH] [--threads=THREAD] [--book_id=BOOK_IDS...] [options]
   cli.py parse_references [--input_path=PATH] [--threads=THREAD] [--book_id=BOOK_IDS...] [options]
-  cli.py match_reference <reference> [--input_path=PATH] [options]
+  cli.py match_reference <reference> [--parser=PARSER] [--input_path=PATH] [options]
   cli.py list_books [--input_path=PATH] [options]
   cli.py list_publishers [options]
   cli.py list_parsers [options]
@@ -50,6 +50,9 @@ def run():
     if not args['--publisher_id']:
         args['--publisher_id'] = 'all'
 
+    if not args['--parser']:
+        args['--parser'] = 'Cermine'
+
     # select the action
     if args['extract_texts']:
         publisher_validator(args['--publisher_id'])
@@ -63,7 +66,7 @@ def run():
     elif args['parse_references']:
         parse_references(args['--input_path'], args['--book_id'], args['--threads'])
     elif args['match_reference']:
-        match_reference(args['<reference>'])
+        match_reference(args['<reference>'], args['--parser'])
     elif args['list_parsers']:
         print_parsers()
 

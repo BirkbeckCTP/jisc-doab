@@ -190,10 +190,13 @@ def parse_reference(book_id, input_path):
             logger.debug(f"No book.epub available: {e}")
 
 
-def match_reference(reference=None):
-    # TODO: Allow user to choose parser?
-    clean = CermineParserMixin.clean(reference)
-    parsed_reference = CermineParserMixin.parse_reference(clean)
+def match_reference(reference=None, parser='Cermine'):
+    from doab import reference_parsers
+    parser_class = reference_parsers.get_parser_by_name(parser)
+
+    clean = parser_class.clean(reference)
+    parsed_reference = parser_class.parse_reference(clean)
+
     matches = {(book.doab_id, book.title) for book in match(parsed_reference)}
     print(f"Matched {len(matches)} books referencing the same citation")
     for i, matched in enumerate(matches, 1):
