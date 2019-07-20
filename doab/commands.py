@@ -173,6 +173,7 @@ def parse_reference(book_id, input_path):
                 ).filter(models.Book.doab_id == book_id).one()
 
                 for parser in book.parsers:
+                    logger.debug("Running parser {0} for book {1}.".format(parser, book_id))
                     parser_for_book = parser(book_id, path)
                     parser.run(session)
 
@@ -183,7 +184,7 @@ def parse_reference(book_id, input_path):
             if publisher:
                 pass
             else:
-                logger.debug(f"No publisher info for {0} so unable to match to parser.".format(book_id))
+                logger.debug("No publisher info for {0} so unable to match to parser.".format(book_id))
 
         except FileNotFoundError as e:
             logger.debug(f"No book.epub available: {e}")
