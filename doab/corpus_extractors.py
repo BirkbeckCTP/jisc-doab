@@ -15,7 +15,7 @@ class BaseExtractor():
         logger.debug(f"Preparing extractor {self}")
 
     @classmethod
-    def from_identifier(cls, record, identifier):
+    def from_identifier(cls, record, identifier, doab_record):
         """Instantiates the extractor if relevant for the identifier
         :param record: An instance of client.DOABRecord
         :return: an instance of `cls`
@@ -24,6 +24,7 @@ class BaseExtractor():
 
 
 class BaseCorpusExtractor(BaseExtractor):
+
     def __init__(self, record, identifier):
         super().__init__(record, identifier)
 
@@ -31,16 +32,16 @@ class BaseCorpusExtractor(BaseExtractor):
         return f"{self.__class__.__name__}({self.identifier})"
 
     @staticmethod
-    def validate_identifier(identifier):
+    def validate_identifier(identifier, doab_record):
         """ Validates if this parser can handle the given identifier
         :return: `bool`
         """
         raise NotImplementedError()
 
     @classmethod
-    def from_identifier(cls, record, identifier):
-        if cls.validate_identifier(identifier):
-            return super().from_identifier(record, identifier)
+    def from_identifier(cls, record, identifier, metadata):
+        if cls.validate_identifier(identifier, record):
+            return super().from_identifier(record, identifier, record)
         else:
             return None
 
@@ -56,7 +57,7 @@ class MimeBasedCorpusExtractor(BaseCorpusExtractor):
     FILE_LABEL = None
 
     @classmethod
-    def validate_identifier(cls, identifier):
+    def validate_identifier(cls, identifier, doab_record):
         session = requests.session()
         content_type = session.head(identifier).headers.get("content-type")
         if content_type == cls.CONTENT_TYPE:
@@ -80,7 +81,7 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
     DOI_RE = re.compile(r"/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i")
 
     @classmethod
-    def validate_identifier(cls, identifier):
+    def validate_identifier(cls, identifier, doab_record):
         return identifier.startswith("https://www.doabooks.org/doab?func=search")
 
     @classmethod
@@ -123,12 +124,54 @@ class EPUBCorpusExtractor(MimeBasedCorpusExtractor):
 
 class DebugCorpusExtractor(BaseCorpusExtractor):
     @staticmethod
-    def validate_identifier(identifier):
+    def validate_identifier(identifier, metadata):
         session = requests.session()
         content_type = session.head(identifier).headers.get("content-type")
         print("[IDENTIFIER] -  ", identifier)
         print("[CONTENT_TYPE] - ", content_type)
         return False
+
+
+class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
+    """ Extracts formatted HTML from CUP
+
+    Formatted HTML base:
+        https://doi.org/10.1017/CBO<ISBN-13>
+    """
+
+    PUBLISHER_NAME = 'Cambridge University Press'
+    HTML_BASE_URL = 'https://doi.org/10.1017/CBO'
+
+    @staticmethod
+    def validate_identifier(identifier, doab_record):
+        return doab_record.metadata['publisher'][0] == CambridgeUniversityPressExtractor.PUBLISHER_NAME
+
+    def extract(self):
+        identifiers = filter(is_isbn, self.record.metadata['identifier'])
+        for identifier in identifiers:
+            isbn = identifier.split(':')[1].strip()
+            try:
+                uri = f"{self.HTML_BASE_URL}{isbn}"
+                yield (const.RECOGNIZED_BOOK_TYPES['CambridgeCore'], self._fetch(uri))
+            except requests.exceptions.HTTPError as e:
+                # 404 here indicates that we are using the wrong ISBN and it's just trial and error
+                if e.response.status_code == 404:
+                    logger.debug('No Cambridge Core URL for ISBN {0}'.format(isbn))
+                else:
+                    logger.error(e)
+
+    @staticmethod
+    def _fetch(uri):
+        response = requests.get(uri)
+        if response.status_code == 200:
+            return(response.content)
+        else:
+            response.raise_for_status()
+
+    @property
+    def doi(self):
+        # DOIs are the last part of the identifier (suffix/prefix)
+        return "/".join(self.identifier.split("/")[-2:])
 
 class SpringerCorpusExtractor(BaseCorpusExtractor):
     """ Extracts PDF and EPUB book files
@@ -144,7 +187,7 @@ class SpringerCorpusExtractor(BaseCorpusExtractor):
     EPUB_BASE_URL = "https://link.springer.com/download/epub/"
 
     @staticmethod
-    def validate_identifier(identifier):
+    def validate_identifier(identifier, doab_record):
         return "springer.com" in identifier
 
     def extract(self):
@@ -177,8 +220,13 @@ class SpringerCorpusExtractor(BaseCorpusExtractor):
 
 CORPUS_EXTRACTORS = [
     #DebugCorpusExtractor,
+    JSONMetadataExtractor,
     PDFCorpusExtractor,
     EPUBCorpusExtractor,
     SpringerCorpusExtractor,
-    JSONMetadataExtractor,
+    CambridgeUniversityPressExtractor,
 ]
+
+
+def is_isbn(identifier):
+    return True if identifier.startswith('ISBN:') else False

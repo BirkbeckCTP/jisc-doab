@@ -52,7 +52,7 @@ class DOABRecord():
         self.doab_id = record.header.identifier.split(":")[-1]
         self.identifiers = filter(is_uri, record.metadata["identifier"])
         extractors = [
-            extractor.from_identifier(self, identifier)
+            extractor.from_identifier(self, identifier, self.metadata)
             for identifier in self.identifiers
             for extractor in CORPUS_EXTRACTORS
         ]
@@ -85,7 +85,6 @@ def is_uri(uri):
     except Exception as e:
         print(e)
         return False
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
