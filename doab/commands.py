@@ -197,11 +197,10 @@ def match_reference(reference=None, parser='Cermine'):
     clean = parser_class.clean(reference)
     parsed_reference = parser_class.parse_reference(clean)
 
-    matches = {(book.doab_id, book.title) for book in match(parsed_reference)}
+    matches = {book for book in match(parsed_reference)}
     print(f"Matched {len(matches)} books referencing the same citation")
     for i, matched in enumerate(matches, 1):
-        book_id, title = matched
-        print (f"{i}. {book_id} - {title}")
+        print (f"{i}. {matched.doab_id} - {matched.title}")
     return matches
 
 
