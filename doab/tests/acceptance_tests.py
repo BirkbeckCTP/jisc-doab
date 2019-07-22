@@ -1,5 +1,9 @@
 from doab.tests.test_types import AcceptanceTest, TestManager
 
+@TestManager.register
+class PalgraveCUPIntersect(AcceptanceTest):
+    CITATION = "C.P. Snow. 1993. The Two Cultures"
+    BOOK_IDS = {"16498", "27401"}
 
 @TestManager.register
 class PalgraveAcceptanceTestA(AcceptanceTest):
