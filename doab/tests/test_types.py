@@ -45,8 +45,7 @@ class AcceptanceTest(object):
 
     def assert_references_matched(self):
         expected = {id_ for id_ in self.BOOK_IDS}
-        books = match_reference(self.CITATION)
-        result = {book.doab_id for book in books}
+        result = set(match_reference(self.CITATION).keys())
         print(f"Matched book IDS: {result}")
         failures = expected - result
         if failures:

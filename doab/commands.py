@@ -12,10 +12,7 @@ from doab.client import DOABOAIClient
 from doab.db import models, session_context
 from doab.files import FileManager
 from doab.reference_matching import match
-from doab.reference_parsers import (
-    CermineParserMixin,
-    PalgraveEPUBParser,
-    CrossrefParserMixin)
+from doab import reference_parsers
 from doab import tasker
 
 logger = logging.getLogger(__name__)
@@ -191,21 +188,19 @@ def parse_reference(book_id, input_path):
 
 
 def match_reference(reference=None, parser='Cermine'):
-    from doab import reference_parsers
     parser_class = reference_parsers.get_parser_by_name(parser)
 
     clean = parser_class.clean(reference)
     parsed_reference = parser_class.parse_reference(clean)
 
-    matches = {book for book in match(parsed_reference)}
+    matches = {book.doab_id: book.title for book in match(parsed_reference)}
     print(f"Matched {len(matches)} books referencing the same citation")
-    for i, matched in enumerate(matches, 1):
+    for i, matched in enumerate(matches.values(), 1):
         print (f"{i}. {matched.doab_id} - {matched.title}")
     return matches
 
 
 def print_parsers():
-    from doab import reference_parsers
     print('Single citation parsers:')
     for parser in reference_parsers.MIXIN_PARSERS:
         print(parser.PARSER_NAME)
