@@ -46,6 +46,8 @@ def run():
 
     if not args['--threads']:
         args['--threads'] = 0
+    else:
+        args['--threads'] = int(args['--threads'])
 
     if not args['--publisher_id']:
         args['--publisher_id'] = 'all'
