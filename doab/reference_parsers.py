@@ -308,7 +308,14 @@ class CermineParserMixin(SubprocessParserMixin):
             bibtex_parser = BibTexParser()
         bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
         logger.debug(f"Bibtex {bibtex_reference}")
-        return bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+
+        result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+
+        # append a full stop if there is no title returned and re-run
+        if not 'title' in result:
+            bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference + '.',)))
+            result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+        return result
 
 
 class PublisherSpecificMixin(object):
