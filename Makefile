@@ -21,13 +21,15 @@ help:		## Show this help.
 doab-cli:	## Run DOAB commands in a container
 	docker-compose $(_VERBOSE) run --rm doab $(CMD)
 install:	## Runs database migrations on the postgres database
-	docker-compose run --rm --entrypoint=alembic doab upgrade head
+	@docker-compose run --rm --entrypoint="echo 'Starting Installation'" doab
+	@make db-client DB_QUERY="-c 'CREATE EXTENSION pg_trgm;'" | true
+	@docker-compose run --rm --entrypoint=alembic doab upgrade head
 rebuild:	## Rebuild the doab docker image.
 	docker-compose build --no-cache doab
 shell:		## Starts an interactive shell within a docker container build from the same image as the one used by the CLI
 	docker-compose run --entrypoint=/bin/bash --rm doab
 db-client:	## runs the database CLI client interactively within the database container
-	docker exec -ti `docker ps -q --filter 'name=doab-postgres'` $(CLI_COMMAND)
+	@docker exec -ti `docker ps -q --filter 'name=doab-postgres'` $(CLI_COMMAND) $(DB_QUERY)
 uninstall:	## Removes all doab related docker containers, docker images and database volumes
 	@bash -c "rm -rf volumes/*"
 	@bash -c "docker rm -f `docker ps --filter 'name=doab*' -aq` >/dev/null 2>&1 | true"
