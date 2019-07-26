@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 def match(reference, session, return_references=False):
     matches = []
     for matcher in MATCHERS:
+        matched = matcher(reference, session)
         if return_references:
-            matches += chain.from_iterable(matcher(reference,session).values())
+            matches += matched.keys()
         else:
-            matches += matcher(reference, session).keys()
+            matches += chain.from_iterable(matched.values())
     return matches
 
 @match.register(models.ParsedReference)
@@ -52,7 +53,6 @@ def match_title_exact(reference, session):
         models.ParsedReference.title == reference["title"],
     )
     return {p.reference_id: p.reference.books for p in parses_matching}
-
 
 
 def match_fuzzy(reference, session):
