@@ -108,12 +108,18 @@ class Reference(Base):
 
 class ParsedReference(Base):
     def __str__(self):
-        return str({'authors': self.authors,
-                    'title': self.title,
-                    'journal': self.journal,
-                    'volume': self.volume,
-                    'doi': self.doi,
-                    'year': self.year})
+        out = {'authors': self.authors,
+               'title': self.title,
+               'journal': self.journal,
+               'volume': self.volume,
+               'doi': self.doi,
+               'year': self.year}
+
+        # add the raw reference if this is a bad parse
+        if self.title == '' or self.authors == '':
+            out['raw'] = self.raw_reference
+
+        return str(out)
 
     __tablename__ = "parsed_reference"
     __table_args__ = (

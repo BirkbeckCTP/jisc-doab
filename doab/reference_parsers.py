@@ -192,15 +192,8 @@ class CambridgeCoreMixin(BaseReferenceParser):
 
         for ref in self.references:
             parsed = self.parse_reference(ref)
-            if parsed:
-                logger.debug(f'Parsed: {parsed}')
-                self.references[ref].append((self.PARSER_NAME, parsed))
-            else:
-                del_list.append(ref)
-                logger.debug(f'Not parsed: {ref}')
-
-        for del_ref in del_list:
-            del self.references[del_ref]
+            logger.debug(f'Parsed: {parsed}')
+            self.references[ref].append((self.PARSER_NAME, parsed))
 
     def parse_reference(cls, reference):
         reference_json = json.loads(reference)
@@ -243,11 +236,6 @@ class CambridgeCoreMixin(BaseReferenceParser):
             formatted_reference['volume'] = reference_json['atom:content']['m:journal-volume']
 
         formatted_reference['parser'] = cls.PARSER_NAME
-
-        if not 'title' in formatted_reference and not 'journal' in formatted_reference and not 'doi' in formatted_reference:
-            return None
-        elif 'title' in formatted_reference and formatted_reference['title'] == '' and not 'journal' in formatted_reference and not 'doi' in formatted_reference:
-            return None
 
         return formatted_reference
 
