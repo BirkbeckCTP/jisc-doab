@@ -90,7 +90,10 @@ class Identifier(Base):
 
 class Reference(Base):
     def __str__(self):
-        return str(self.parsed_references[0])
+        if len(self.parsed_references) > 0:
+            return str(self.parsed_references[0])
+        else:
+            return ''
 
     __tablename__ = "reference"
     id = Column(String, primary_key=True)

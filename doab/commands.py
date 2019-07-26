@@ -152,6 +152,26 @@ def upsert_identifier(session, identifier_str):
     return identifier
 
 
+def nuke_citations(book_ids=None):
+    with session_context() as session:
+        for book_id in book_ids:
+            # fetch book metadata
+            try:
+                book = session.query(
+                    models.Book
+                ).filter(models.Book.doab_id == str(book_id)).one()
+
+                for reference in book.references:
+                    for parsed_ref in reference.parsed_references:
+                        session.delete(parsed_ref)
+                    session.delete(reference)
+
+                session.commit()
+                print(f'Nuked references for book {book.doab_id}')
+            except NoResultFound:
+                logger.error(f'Error retrieving book {book_id}.')
+
+
 def print_citations(book_ids=None):
     with session_context() as session:
         for book_id in book_ids:

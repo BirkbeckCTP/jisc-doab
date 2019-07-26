@@ -90,24 +90,21 @@ class BaseReferenceParser(object):
                         models.ParsedReference.parser==parser_type,
                     ).one()
 
-                    session.delete(parsed_reference)
-                    logger.debug("Removing old parsed reference")
+                    logger.debug("Existing reference found. Ignoring. Use nuke command to update.")
                 except NoResultFound:
-                    pass
-
-                parsed_reference = models.ParsedReference(
-                    reference_id=reference.id,
-                    raw_reference=ref,
-                    parser=parser_type,
-                    authors=parsed.get("author"),
-                    title=parsed.get("title"),
-                    pages=parsed.get("pages"),
-                    journal=parsed.get("journal"),
-                    volume=parsed.get("volume"),
-                    doi=parsed.get("doi"),
-                    year=parsed.get("year"),
-                )
-                session.add(parsed_reference)
+                    parsed_reference = models.ParsedReference(
+                        reference_id=reference.id,
+                        raw_reference=ref,
+                        parser=parser_type,
+                        authors=parsed.get("author"),
+                        title=parsed.get("title"),
+                        pages=parsed.get("pages"),
+                        journal=parsed.get("journal"),
+                        volume=parsed.get("volume"),
+                        doi=parsed.get("doi"),
+                        year=parsed.get("year"),
+                    )
+                    session.add(parsed_reference)
                 session.commit()
 
     def echo(self):
@@ -187,13 +184,19 @@ class CambridgeCoreMixin(BaseReferenceParser):
             self.process_soup(soup)
 
     def parse(self):
+        del_list = []
+
         for ref in self.references:
             parsed = self.parse_reference(ref)
             if parsed:
                 logger.debug(f'Parsed: {parsed}')
                 self.references[ref].append((self.PARSER_NAME, parsed))
             else:
+                del_list.append(ref)
                 logger.debug(f'Not parsed: {ref}')
+
+        for del_ref in del_list:
+            del self.references[del_ref]
 
     def parse_reference(cls, reference):
         reference_json = json.loads(reference)

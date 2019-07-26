@@ -9,6 +9,7 @@ Usage:
   cli.py list_books [--input_path=PATH] [options]
   cli.py list_publishers [options]
   cli.py list_parsers [options]
+  cli.py nuke_citations [--book_id=BOOK_IDS...] [options]
 
   cli.py (-h | --help)
   cli.py --version
@@ -32,6 +33,7 @@ from doab.commands import (
     print_books,
     print_parsers,
     print_citations,
+    nuke_citations,
 )
 
 
@@ -75,6 +77,8 @@ def run():
         print_parsers()
     elif args['list_citations']:
         print_citations(args['--book_id'])
+    elif args['nuke_citations']:
+        nuke_citations(args['--book_id'])
 
 
 def publisher_validator(arg):
