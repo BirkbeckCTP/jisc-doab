@@ -89,21 +89,25 @@ class BaseReferenceParser(object):
                         models.ParsedReference.reference_id==reference.id,
                         models.ParsedReference.parser==parser_type,
                     ).one()
-                    logger.debug("parsed reference found, ignoring...")
+
+                    session.delete(parsed_reference)
+                    logger.debug("Removing old parsed reference")
                 except NoResultFound:
-                    parsed_reference = models.ParsedReference(
-                        reference_id=reference.id,
-                        raw_reference=ref,
-                        parser=parser_type,
-                        authors=parsed.get("author"),
-                        title=parsed.get("title"),
-                        pages=parsed.get("pages"),
-                        journal=parsed.get("journal"),
-                        volume=parsed.get("volume"),
-                        doi=parsed.get("doi"),
-                        year=parsed.get("year"),
-                    )
-                    session.add(parsed_reference)
+                    pass
+
+                parsed_reference = models.ParsedReference(
+                    reference_id=reference.id,
+                    raw_reference=ref,
+                    parser=parser_type,
+                    authors=parsed.get("author"),
+                    title=parsed.get("title"),
+                    pages=parsed.get("pages"),
+                    journal=parsed.get("journal"),
+                    volume=parsed.get("volume"),
+                    doi=parsed.get("doi"),
+                    year=parsed.get("year"),
+                )
+                session.add(parsed_reference)
                 session.commit()
 
     def echo(self):
@@ -214,9 +218,9 @@ class CambridgeCoreMixin(BaseReferenceParser):
             formatted_reference['journal'] = reference_json['atom:content']['m:journal-title']
 
         # authors
-        formatted_reference['authors'] = ''
+        formatted_reference['author'] = ''
         for author in reference_json['atom:content']['m:authors']:
-            formatted_reference['authors'] += f'{author["content"]}, '
+            formatted_reference['author'] += f'{author["content"]}, '
 
         # DOI where it exists
         if reference_json['atom:content']['m:dois'] is not None \
