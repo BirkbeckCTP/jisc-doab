@@ -6,6 +6,8 @@ import os
 import shutil
 import subprocess
 
+from crossref.restful import Works
+
 from bs4 import BeautifulSoup
 from bibtexparser.bparser import BibTexParser
 from doab import const
@@ -190,10 +192,19 @@ class CambridgeCoreMixin(BaseReferenceParser):
     def parse(self):
         del_list = []
 
+        crossref_handler = CrossrefParserMixin(self.book_id, self.book_path)
+
         for ref in self.references:
             parsed = self.parse_reference(ref)
-            logger.debug(f'Parsed: {parsed}')
+            logger.debug(f'{self.PARSER_NAME} parsed: {parsed}')
             self.references[ref].append((self.PARSER_NAME, parsed))
+
+            # delegate to crossref handler if we have a DOI
+            if 'doi' in parsed:
+                doi = crossref_handler.parse_reference(parsed['doi'])
+                if doi:
+                    logger.debug(f'{crossref_handler.PARSER_NAME} parsed: {doi}')
+                    self.references[ref].append((crossref_handler.PARSER_NAME, doi))
 
     def parse_reference(cls, reference):
         reference_json = json.loads(reference)
@@ -276,20 +287,43 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
     def parse(self):
         # using the Crossref approved single DOI: https://www.crossref.org/blog/dois-and-matching-regular-expressions/
         # 'for the 74.9M DOIs we have seen this matches 74.4M of them'
-        crossref_doi_re = re.compile(r'/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i')
-        for ref, parse in self.references.items():
-            crossref_match = crossref_doi_re.search(ref)
-            if crossref_match:
-                logger.debug(crossref_match)
+
+        for ref in self.references:
+            parsed = self.parse_reference(ref)
+            logger.debug(f'Parsed: {parsed}')
+            self.references[ref].append((self.PARSER_NAME, parsed))
 
     @classmethod
     def parse_reference(cls, reference, bibtex_parser=None):
-        if bibtex_parser is None:
-            bibtex_parser = BibTexParser()
-        #bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
-        #logger.debug(f"Bibtex {bibtex_reference}")
-        #return bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
-        return None
+        crossref_match = const.DOI_RE.search(reference)
+        ret = {'parser': cls.PARSER_NAME,
+               'raw_reference': reference}
+
+        if crossref_match:
+            works = Works(etiquette=const.CROSSREF_ETIQUETTE)
+            doi = works.doi(crossref_match.group(0))
+
+            if doi:
+
+                ret['doi'] = crossref_match.group(0)
+
+                ret['author'] = ''
+                if 'author' in doi:
+                    ret['author'] = ', '.join([f'{author["given"]} {author["family"]}' for author in doi['author']])
+
+                if 'title' in doi:
+                    ret['title'] = doi['title'][0]
+
+                if 'container-title' in doi and len(doi['container-title']) > 0:
+                    ret['journal'] = doi['container-title'][0]
+
+                if 'volume' in doi:
+                    ret['volume'] = doi['volume'][0]
+
+                if 'published-online' in doi:
+                    ret['year'] = doi['published-online']['date-parts'][0][0]
+
+        return ret
 
 
 class CermineParserMixin(SubprocessParserMixin):
