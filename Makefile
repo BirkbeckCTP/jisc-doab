@@ -20,9 +20,11 @@ help:		## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
 doab-cli:	## Run DOAB commands in a container
 	docker-compose $(_VERBOSE) run --rm doab $(CMD)
-install:	## Runs database migrations on the postgres database
+install:	## Initialises the database
 	@docker-compose run --rm --entrypoint="echo 'Starting Installation'" doab
 	@make db-client DB_QUERY="-c 'CREATE EXTENSION pg_trgm;'" | true
+	@make migrate
+migrate:	## Runs the database migrations
 	@docker-compose run --rm --entrypoint=alembic doab upgrade head
 rebuild:	## Rebuild the doab docker image.
 	docker-compose build --no-cache doab
@@ -37,3 +39,6 @@ uninstall:	## Removes all doab related docker containers, docker images and data
 	@echo " DOAB Intersect has been uninstalled"
 check:		## Runs the test suite
 	bash -c "docker-compose run --rm --entrypoint=python doab doab/tests"
+revisions:	## Creates the database revisions according to changes to the models. The MSG variable is used to passed the the description of the revision
+	@test -n "$(MSG)" || (echo "The MSG variable must be passed" ; exit 1)
+	@docker-compose run --rm --entrypoint=alembic doab revision -m "$(MSG)"
