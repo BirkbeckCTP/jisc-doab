@@ -93,7 +93,7 @@ class Reference(Base):
     id = Column(String, primary_key=True)
     matched_id = Column(Text, ForeignKey("book.doab_id"), nullable=True)
 
-    parsed_references = relationship("ParsedReference", backref="reference")
+    parsed_references = relationship("ParsedReference", backref="reference", lazy="joined")
 
 
 class ParsedReference(Base):
