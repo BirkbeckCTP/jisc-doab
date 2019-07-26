@@ -16,7 +16,7 @@ from sqlalchemy.orm import relationship
 
 from doab import const
 from doab.files import EPUBFileManager
-from doab.reference_parsers import yield_parsers
+from doab.reference_parsers import yield_parsers, get_parser_by_name
 
 Base = declarative_base()
 
@@ -91,7 +91,11 @@ class Identifier(Base):
 class Reference(Base):
     def __str__(self):
         if len(self.parsed_references) > 0:
-            return str(self.parsed_references[0])
+            # find the parser with the greatest accuracy
+            prs = list(self.parsed_references)
+            prs.sort(reverse=True, key=lambda x: get_parser_by_name(x.parser, mixin_only=False).accuracy)
+
+            return str(prs[0])
         else:
             return ''
 

@@ -34,6 +34,10 @@ class BaseReferenceParser(object):
         self.book_id = str(book_id)
         self.references = {}
 
+    # a variable that children can override to specify how good they are
+    # compared to other parsers
+    accuracy = 10
+
     def prepare(self):
         """ Routines to be run in preparation to parsing the references
 
@@ -274,6 +278,7 @@ class EPUBPrepareMixin(BaseReferenceParser):
 
 
 class CrossrefParserMixin(HTTPBasedParserMixin):
+    accuracy = 100
     PARSER_NAME = 'Crossref'
     """A parser that matches DOIS and retrieves metadata via Crossref API"""
 
@@ -300,6 +305,7 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
 
 
 class CermineParserMixin(SubprocessParserMixin):
+    accuracy = 50
     PARSER_NAME = 'Cermine'
     CMD = "cermine"
     ARGS = [
@@ -378,6 +384,7 @@ class PublisherSpecificMixin(object):
 
 
 class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
+    accuracy = 60
     HTML_FILTER = ("div", {"class": "CitationContent"})
     PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
     FILE_TYPES = ['epub']
@@ -385,6 +392,7 @@ class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecific
 
 
 class CambridgeCoreParser(CambridgeCoreMixin, PublisherSpecificMixin):
+    accuracy = 85
     # <meta name = "citation_reference" content = "citation_title=title; citation_author=author;
     # citation_publication_date=1990" >
     HTML_FILTER = ("meta", {"name": "citation_reference"})
@@ -405,9 +413,14 @@ PARSERS = [PalgraveEPUBParser, CambridgeCoreParser]
 MIXIN_PARSERS = [CermineParserMixin, CrossrefParserMixin]
 
 
-def get_parser_by_name(parser):
+def get_parser_by_name(parser, mixin_only=True):
     for parse_class in MIXIN_PARSERS:
         if parse_class.PARSER_NAME == parser:
             return parse_class
+
+    if not mixin_only:
+        for parse_class in PARSERS:
+            if parse_class.PARSER_NAME == parser:
+                return parse_class
 
     return None
