@@ -17,8 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    op.execute('ALTER TABLE parsed_reference DROP CONSTRAINT parsed_reference_pkey CASCADE')
+    op.execute('ALTER TABLE parsed_reference ADD PRIMARY KEY (parser,reference_id)')
 
 
 def downgrade():
-    pass
+    op.execute('ALTER TABLE parsed_reference DROP CONSTRAINT parsed_reference_pkey CASCADE')
+    op.execute('ALTER TABLE parsed_reference ADD PRIMARY KEY (reference_id)')
