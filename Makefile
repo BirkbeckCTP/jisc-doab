@@ -41,4 +41,4 @@ check:		## Runs the test suite
 	bash -c "docker-compose run --rm --entrypoint=python doab doab/tests"
 revisions:	## Creates the database revisions according to changes to the models. The MSG variable is used to passed the the description of the revision
 	@test -n "$(MSG)" || (echo "The MSG variable must be passed" ; exit 1)
-	@docker-compose run --rm --entrypoint=alembic doab revision -m "$(MSG)"
+	@docker-compose run --rm --entrypoint=alembic doab revision --autogenerate -m "$(MSG)"
