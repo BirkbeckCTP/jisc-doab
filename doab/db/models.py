@@ -16,7 +16,7 @@ from sqlalchemy.orm import relationship
 
 from doab import const
 from doab.files import EPUBFileManager
-from doab.reference_parsers import yield_parsers
+from doab.reference_parsers import yield_parsers, get_parser_by_name
 
 Base = declarative_base()
 
@@ -89,6 +89,16 @@ class Identifier(Base):
 
 
 class Reference(Base):
+    def __str__(self):
+        if len(self.parsed_references) > 0:
+            # find the parser with the greatest accuracy
+            prs = list(self.parsed_references)
+            prs.sort(reverse=True, key=lambda x: get_parser_by_name(x.parser, mixin_only=False).accuracy)
+
+            return str(prs[0])
+        else:
+            return ''
+
     __tablename__ = "reference"
     id = Column(String, primary_key=True)
     matched_id = Column(Text, ForeignKey("book.doab_id"), nullable=True)
@@ -97,6 +107,20 @@ class Reference(Base):
 
 
 class ParsedReference(Base):
+    def __str__(self):
+        out = {'authors': self.authors,
+               'title': self.title,
+               'journal': self.journal,
+               'volume': self.volume,
+               'doi': self.doi,
+               'year': self.year}
+
+        # add the raw reference if this is a bad parse
+        if self.title == '' or self.authors == '':
+            out['raw'] = self.raw_reference
+
+        return str(out)
+
     __tablename__ = "parsed_reference"
     __table_args__ = (
         Index('parse_ref_title_idx', "title",
