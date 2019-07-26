@@ -101,8 +101,12 @@ class Reference(Base):
 
 class ParsedReference(Base):
     def __str__(self):
-        return f'{self.authors}, ' \
-            f'{self.title}, {self.journal}'
+        return str({'authors': self.authors,
+                    'title': self.title,
+                    'journal': self.journal,
+                    'volume': self.volume,
+                    'doi': self.doi,
+                    'year': self.year})
 
     __tablename__ = "parsed_reference"
     __table_args__ = (
