@@ -129,7 +129,7 @@ class ParsedReference(Base):
     )
     reference_id = Column(String, ForeignKey("reference.id"), primary_key=True)
     raw_reference = Column(Text)
-    parser = Column(String)
+    parser = Column(String, primary_key=True)
     authors = Column(String, nullable=True)
     title = Column(String, nullable=True)
     pages = Column(String, nullable=True)
