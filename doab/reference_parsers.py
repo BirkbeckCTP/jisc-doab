@@ -309,12 +309,30 @@ class CermineParserMixin(SubprocessParserMixin):
         bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
         logger.debug(f"Bibtex {bibtex_reference}")
 
-        result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+        result = None
+
+        try:
+            result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+        except IndexError:
+            # unable to parse
+            pass
+
+        fail_message = f'{cls.PARSER_NAME} was unable to pull a title from {reference}'
 
         # append a full stop if there is no title returned and re-run
-        if not 'title' in result:
+        if not result or not 'title' in result:
             bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference + '.',)))
-            result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+
+            try:
+                result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+            except IndexError:
+                logger.debug(fail_message)
+                return None
+
+            if not 'title' in result:
+                logger.debug(fail_message)
+                return None
+
         return result
 
 
