@@ -5,6 +5,7 @@ Usage:
   cli.py import_metadata [--input_path=PATH] [--threads=THREAD] [--book_id=BOOK_IDS...] [options]
   cli.py parse_references [--input_path=PATH] [--threads=THREAD] [--book_id=BOOK_IDS...] [options]
   cli.py match_reference <reference> [--parser=PARSER] [--input_path=PATH] [options]
+  cli.py list_citations [--book_id=BOOK_IDS...] [options]
   cli.py list_books [--input_path=PATH] [options]
   cli.py list_publishers [options]
   cli.py list_parsers [options]
@@ -29,7 +30,8 @@ from doab.commands import (
     parse_references,
     match_reference,
     print_books,
-    print_parsers
+    print_parsers,
+    print_citations,
 )
 
 
@@ -71,6 +73,8 @@ def run():
         match_reference(args['<reference>'], args['--parser'])
     elif args['list_parsers']:
         print_parsers()
+    elif args['list_citations']:
+        print_citations(args['--book_id'])
 
 
 def publisher_validator(arg):

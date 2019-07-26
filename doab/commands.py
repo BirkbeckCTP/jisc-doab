@@ -152,6 +152,21 @@ def upsert_identifier(session, identifier_str):
     return identifier
 
 
+def print_citations(book_ids=None):
+    with session_context() as session:
+        for book_id in book_ids:
+            # fetch book metadata
+            try:
+                book = session.query(
+                    models.Book
+                ).filter(models.Book.doab_id == str(book_id)).one()
+
+                for reference in book.references:
+                    print(reference)
+
+            except NoResultFound:
+                logger.error(f'Error retrieving book {book_id}.')
+
 def parse_references(input_path, book_ids=None, workers=0):
     if not book_ids:
         book_ids = list_extracted_books(input_path)

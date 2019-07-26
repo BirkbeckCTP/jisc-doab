@@ -89,6 +89,9 @@ class Identifier(Base):
 
 
 class Reference(Base):
+    def __str__(self):
+        return str(self.parsed_references[0])
+
     __tablename__ = "reference"
     id = Column(String, primary_key=True)
     matched_id = Column(Text, ForeignKey("book.doab_id"), nullable=True)
@@ -97,6 +100,10 @@ class Reference(Base):
 
 
 class ParsedReference(Base):
+    def __str__(self):
+        return f'{self.authors}, ' \
+            f'{self.title}, {self.journal}'
+
     __tablename__ = "parsed_reference"
     __table_args__ = (
         Index('parse_ref_title_idx', "title",
