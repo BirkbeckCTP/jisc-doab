@@ -180,7 +180,6 @@ class CambridgeCoreMixin(BaseReferenceParser):
             reference_list = json.loads(or_matches.group(1))
 
             for ref in reference_list:
-                # TODO: note, this seems _very_ slow
                 self.references[json.dumps(ref)] = []
         else:
             logger.debug('Using soup fallback method')
@@ -190,8 +189,11 @@ class CambridgeCoreMixin(BaseReferenceParser):
     def parse(self):
         for ref in self.references:
             parsed = self.parse_reference(ref)
-            logger.debug(f'Parsed: {parsed}')
-            self.references[ref].append((self.PARSER_NAME, parsed))
+            if parsed:
+                logger.debug(f'Parsed: {parsed}')
+                self.references[ref].append((self.PARSER_NAME, parsed))
+            else:
+                logger.debug(f'Not parsed: {ref}')
 
     def parse_reference(cls, reference):
         reference_json = json.loads(reference)
@@ -234,6 +236,11 @@ class CambridgeCoreMixin(BaseReferenceParser):
             formatted_reference['volume'] = reference_json['atom:content']['m:journal-volume']
 
         formatted_reference['parser'] = cls.PARSER_NAME
+
+        if not 'title' in formatted_reference and not 'journal' in formatted_reference and not 'doi' in formatted_reference:
+            return None
+        elif 'title' in formatted_reference and formatted_reference['title'] == '' and not 'journal' in formatted_reference and not 'doi' in formatted_reference:
+            return None
 
         return formatted_reference
 
