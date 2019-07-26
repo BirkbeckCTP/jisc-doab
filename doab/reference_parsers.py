@@ -34,6 +34,10 @@ class BaseReferenceParser(object):
         self.book_id = str(book_id)
         self.references = {}
 
+    # a variable that children can override to specify how good they are
+    # compared to other parsers
+    accuracy = 10
+
     def prepare(self):
         """ Routines to be run in preparation to parsing the references
 
@@ -89,7 +93,8 @@ class BaseReferenceParser(object):
                         models.ParsedReference.reference_id==reference.id,
                         models.ParsedReference.parser==parser_type,
                     ).one()
-                    logger.debug("parsed reference found, ignoring...")
+
+                    logger.debug("Existing reference found. Ignoring. Use nuke command to update.")
                 except NoResultFound:
                     parsed_reference = models.ParsedReference(
                         reference_id=reference.id,
@@ -176,7 +181,6 @@ class CambridgeCoreMixin(BaseReferenceParser):
             reference_list = json.loads(or_matches.group(1))
 
             for ref in reference_list:
-                # TODO: note, this seems _very_ slow
                 self.references[json.dumps(ref)] = []
         else:
             logger.debug('Using soup fallback method')
@@ -184,6 +188,8 @@ class CambridgeCoreMixin(BaseReferenceParser):
             self.process_soup(soup)
 
     def parse(self):
+        del_list = []
+
         for ref in self.references:
             parsed = self.parse_reference(ref)
             logger.debug(f'Parsed: {parsed}')
@@ -214,9 +220,9 @@ class CambridgeCoreMixin(BaseReferenceParser):
             formatted_reference['journal'] = reference_json['atom:content']['m:journal-title']
 
         # authors
-        formatted_reference['authors'] = ''
+        formatted_reference['author'] = ''
         for author in reference_json['atom:content']['m:authors']:
-            formatted_reference['authors'] += f'{author["content"]}, '
+            formatted_reference['author'] += f'{author["content"]}, '
 
         # DOI where it exists
         if reference_json['atom:content']['m:dois'] is not None \
@@ -260,6 +266,7 @@ class EPUBPrepareMixin(BaseReferenceParser):
 
 
 class CrossrefParserMixin(HTTPBasedParserMixin):
+    accuracy = 100
     PARSER_NAME = 'Crossref'
     """A parser that matches DOIS and retrieves metadata via Crossref API"""
 
@@ -286,6 +293,7 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
 
 
 class CermineParserMixin(SubprocessParserMixin):
+    accuracy = 50
     PARSER_NAME = 'Cermine'
     CMD = "cermine"
     ARGS = [
@@ -309,12 +317,30 @@ class CermineParserMixin(SubprocessParserMixin):
         bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
         logger.debug(f"Bibtex {bibtex_reference}")
 
-        result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+        result = None
+
+        try:
+            result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+        except IndexError:
+            # unable to parse
+            pass
+
+        fail_message = f'{cls.PARSER_NAME} was unable to pull a title from {reference}'
 
         # append a full stop if there is no title returned and re-run
-        if not 'title' in result:
+        if not result or not 'title' in result:
             bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference + '.',)))
-            result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+
+            try:
+                result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
+            except IndexError:
+                logger.debug(fail_message)
+                return None
+
+            if not 'title' in result:
+                logger.debug(fail_message)
+                return None
+
         return result
 
 
@@ -346,6 +372,7 @@ class PublisherSpecificMixin(object):
 
 
 class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecificMixin):
+    accuracy = 60
     HTML_FILTER = ("div", {"class": "CitationContent"})
     PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
     FILE_TYPES = ['epub']
@@ -353,6 +380,7 @@ class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecific
 
 
 class CambridgeCoreParser(CambridgeCoreMixin, PublisherSpecificMixin):
+    accuracy = 85
     # <meta name = "citation_reference" content = "citation_title=title; citation_author=author;
     # citation_publication_date=1990" >
     HTML_FILTER = ("meta", {"name": "citation_reference"})
@@ -373,9 +401,14 @@ PARSERS = [PalgraveEPUBParser, CambridgeCoreParser]
 MIXIN_PARSERS = [CermineParserMixin, CrossrefParserMixin]
 
 
-def get_parser_by_name(parser):
+def get_parser_by_name(parser, mixin_only=True):
     for parse_class in MIXIN_PARSERS:
         if parse_class.PARSER_NAME == parser:
             return parse_class
+
+    if not mixin_only:
+        for parse_class in PARSERS:
+            if parse_class.PARSER_NAME == parser:
+                return parse_class
 
     return None
