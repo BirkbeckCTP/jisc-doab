@@ -181,7 +181,7 @@ class BloomsburyExtractor(BaseCorpusExtractor):
 
                 for ref in soup.find_all(name='a', href=re.compile(new_regex)):
                     if ref and 'href' in ref.attrs and '{page_no}' not in ref['href']:
-                        yield (re.search(chapter_title_regex, ref['href']).group(1),
+                        yield (f'{re.search(chapter_title_regex, ref["href"]).group(1)}.html',
                                self._fetch(f'{self.HTML_BASE_URL}{ref["href"]}'))
 
             except requests.exceptions.HTTPError as e:
