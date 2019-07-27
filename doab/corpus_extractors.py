@@ -212,6 +212,7 @@ class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
     Formatted HTML base:
         https://doi.org/10.1017/CBO<ISBN-13>
     """
+    allow_multiple = False
 
     IDENTIFIER = 'CambridgeUniversityPressExtractor'
     PUBLISHER_NAME = 'Cambridge University Press'
@@ -226,7 +227,6 @@ class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
         for identifier in identifiers:
             isbn = identifier.split(':')[1].strip()
             try:
-                base = self._fetch(identifier)
                 uri = f"{self.HTML_BASE_URL}{isbn}"
                 yield (const.RECOGNIZED_BOOK_TYPES['CambridgeCore'], self._fetch(uri))
             except requests.exceptions.HTTPError as e:
