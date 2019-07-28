@@ -1,9 +1,6 @@
 def column_windows(session, column, windowsize):
     """Return a series of WHERE clauses against
     a given column that break it into windows.
-
-    Result is an iterable of tuples, consisting of
-    ((start, end), whereclause), where (start, end) are the ids.
     """
     def int_for_range(start_id, end_id):
         if end_id:
@@ -39,7 +36,8 @@ def windowed_query(q, column, windowsize):
     """"Break a Query into windows on a given column."""
 
     for whereclause in column_windows(
-                                        q.session,
-                                        column, windowsize):
+        q.session,
+        column, windowsize
+    ):
         for row in q.filter(whereclause).order_by(column):
             yield row
