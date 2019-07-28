@@ -1,6 +1,8 @@
 """
 ORM models for the persistence of DOAB metadata objects
 """
+from uuid import uuid4
+
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -20,12 +22,14 @@ from doab.reference_parsers import yield_parsers, get_parser_by_name
 
 Base = declarative_base()
 
+#Linking table: Authors of a book
 book_author = Table("book_author", Base.metadata,
     Column("book_id", String, ForeignKey("book.doab_id")),
     Column("author_id", String, ForeignKey("author.standarised_name")),
     UniqueConstraint('book_id', 'author_id', name="unique_book_author"),
 )
 
+#Linking table, references contained in a booj
 book_reference = Table("book_reference", Base.metadata,
     Column("book_id", String, ForeignKey("book.doab_id")),
     Column("reference_id", String, ForeignKey("reference.id")),
@@ -60,7 +64,7 @@ class Book(Base):
     )
 
     identifiers = relationship("Identifier", backref="book")
-    referrers = relationship("Reference", backref="match")
+    intersection = relationship("Intersection", backref="book", uselist=False)
 
     def parsers(self, input_path=const.DEFAULT_OUT_DIR):
         return yield_parsers(self, input_path)
@@ -101,7 +105,8 @@ class Reference(Base):
 
     __tablename__ = "reference"
     id = Column(String, primary_key=True)
-    matched_id = Column(Text, ForeignKey("book.doab_id"), nullable=True)
+    matched_id = Column(Text, ForeignKey("intersection.id"), nullable=True)
+
 
     parsed_references = relationship("ParsedReference", backref="reference", lazy="joined")
 
@@ -147,3 +152,14 @@ class Author(Base):
     last_name = Column(String)
     standarised_name = Column(String, primary_key=True)
     reference_name = Column(String)
+
+
+def generate_uuid():
+    return str(uuid4())
+
+
+class Intersection(Base):
+    __tablename__ = "intersection"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    book_id = Column(String, ForeignKey("book.doab_id"), nullable=True)
+    references = relationship("Reference", backref="intersection")

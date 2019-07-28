@@ -7,7 +7,7 @@ import re
 from crossref.restful import Etiquette
 
 # Search weights
-MIN_TITLE_THRESHOLD = 0.85
+MIN_TITLE_THRESHOLD = 0.25
 MIN_AUTHOR_THRESHOLD = 1/2
 
 CROSSREF_ETIQUETTE = Etiquette('Jisc DOAB Experiment', 'v1.0', 'https://www.jisc.ac.uk/rd/projects/open-metrics-lab',

@@ -1,6 +1,7 @@
 from itertools import chain
 import logging
 import re
+from functools import singledispatch
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -10,67 +11,79 @@ from doab.db import models, session_context
 logger = logging.getLogger(__name__)
 
 
-def match(reference):
+@singledispatch
+def match(reference, session, return_references=False):
     matches = []
     for matcher in MATCHERS:
-        matches += matcher(reference)
+        matched = matcher(reference, session)
+        if return_references:
+            matches += matched.keys()
+        else:
+            matches += chain.from_iterable(matched.values())
     return matches
 
+@match.register(models.ParsedReference)
+def match_parsed_reference(reference, *args, **kwargs):
+    d = {
+        "title": reference.title,
+        "doi": reference.doi,
+        "author": reference.authors,
+    }
+    return match(d, *args, **kwargs)
 
-def match_by_doi(reference):
-    matches = []
 
+def match_by_doi(reference, session):
     if "doi" not in reference or reference["doi"] is None:
-        return matches
+        return {}
 
-    with session_context() as session:
-        parses_matching = session.query(
-                models.ParsedReference
-            ).filter(
-                models.ParsedReference.doi == reference["doi"],
-            )
-    return chain.from_iterable(p.reference.books for p in parses_matching)
-
-
-def match_title_exact(reference):
-    if "title" not in reference or reference["title"] is None:
-        return []
-    with session_context() as session:
-        parses_matching = session.query(
-            models.ParsedReference,
+    parses_matching = session.query(
+            models.ParsedReference
         ).filter(
-            models.ParsedReference.title == reference["title"],
+            models.ParsedReference.doi == reference["doi"],
         )
-    return chain.from_iterable(p.reference.books for p in parses_matching)
+    return {p.reference_id: p.reference.books for p in parses_matching}
+
+
+
+def match_title_exact(reference, session):
+    if "title" not in reference or reference["title"] is None:
+        return {}
+    parses_matching = session.query(
+        models.ParsedReference,
+    ).filter(
+        models.ParsedReference.title == reference["title"],
+    )
+    return {p.reference_id: p.reference.books for p in parses_matching}
 
 
 def match_fuzzy(reference):
     title = reference.get("title")
     authors = reference.get("author", "")
     if "title" not in reference or reference["title"] is None:
-        return []
+        return {}
 
     # Fuzzy text search on title against db
-    with session_context() as session:
-        parses_matching = session.query(
-            models.ParsedReference,
-            models.ParsedReference.title.op('<->')(title),
-        ).filter(
-            models.ParsedReference.title.op("%%")(title),
-        )
+    title = reference["title"]
+    match_term = f"%{title}%"
+    parses_matching = session.query(
+        models.ParsedReference,
+        models.ParsedReference.title.op('<->')(title),
+    ).filter(
+        models.ParsedReference.title.op("%%")(title),
+    )
 
-        #refine with autors
-        matches = []
-        for parse, distance in parses_matching:
-            logger.debug(f"Match score {distance}: '{title} || {parse.title}'")
-            if (
-                distance >= const.MIN_TITLE_THRESHOLD
-                or match_authors_fuzzy(authors, parse)
-            ):
-                matches.append(parse.reference.books)
+    #refine with autors
+    matches = []
+    for parse, distance in parses_matching:
+        logger.debug(f"Match score {distance}: '{title} || {parse.title}'")
+        if (
+            (distance <= const.MIN_TITLE_THRESHOLD)
+            or match_authors_fuzzy(authors, parse)
+        ):
+            matches.append(parse)
 
 
-        return chain.from_iterable(matches)
+    return {p.reference_id: p.reference.books for p in matches}
 
 def match_authors_fuzzy(authors, parse):
     """Determines if the authors from a parse match the given authors
@@ -87,16 +100,22 @@ def match_authors_fuzzy(authors, parse):
     initials, names = _split_names_initials(authors)
     parse_initials, parse_names = _split_names_initials(parse.authors)
 
-    matched_names |= (names | parse_names)
+    matched_names &= (names & parse_names)
 
     # Add the initials of the remaining names to the sets containing initials
-    parse_initials |= (parse_names - names)
-    initials |= (names - parse_names)
+    parse_initials &= (parse_names - names)
+    initials &= (names - parse_names)
 
-    matched_names |= (initials | parse_initials)
+    matched_names &= (initials & parse_initials)
+    logger.debug(f"Matched names: {matched_names}")
 
-    return len(matched_names)/len(names|initials)
-
+    try:
+        return (
+            len(matched_names)/len(names|initials)
+            >= const.MIN_AUTHOR_THRESHOLD
+        )
+    except ZeroDivisionError:
+        return False
 
 def _split_names_initials(authors):
     author_names = set(re.compile(r'\w+').findall(authors))
