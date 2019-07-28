@@ -76,7 +76,7 @@ def match_fuzzy(reference, session):
     for parse, distance in parses_matching:
         logger.debug(f"Match score {distance}: '{title} || {parse.title}'")
         if (
-            distance >= const.MIN_TITLE_THRESHOLD
+            (distance <= const.MIN_TITLE_THRESHOLD)
             or match_authors_fuzzy(authors, parse)
         ):
             matches.append(parse)
@@ -99,16 +99,22 @@ def match_authors_fuzzy(authors, parse):
     initials, names = _split_names_initials(authors)
     parse_initials, parse_names = _split_names_initials(parse.authors)
 
-    matched_names |= (names | parse_names)
+    matched_names &= (names & parse_names)
 
     # Add the initials of the remaining names to the sets containing initials
-    parse_initials |= (parse_names - names)
-    initials |= (names - parse_names)
+    parse_initials &= (parse_names - names)
+    initials &= (names - parse_names)
 
-    matched_names |= (initials | parse_initials)
+    matched_names &= (initials & parse_initials)
+    logger.debug(f"Matched names: {matched_names}")
 
-    return len(matched_names)/len(names|initials)
-
+    try:
+        return (
+            len(matched_names)/len(names|initials)
+            >= const.MIN_AUTHOR_THRESHOLD
+        )
+    except ZeroDivisionError:
+        return False
 
 def _split_names_initials(authors):
     author_names = set(re.compile(r'\w+').findall(authors))

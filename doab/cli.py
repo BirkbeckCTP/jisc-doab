@@ -10,6 +10,8 @@ Usage:
   cli.py list_publishers [options]
   cli.py list_parsers [options]
   cli.py nuke_citations [--book_id=BOOK_IDS...] [options]
+  cli.py intersect [options]
+  cli.py list_intersections [options]
 
   cli.py (-h | --help)
   cli.py --version
@@ -25,15 +27,17 @@ from docopt import docopt
 from doab.config import init_logging
 
 from doab.commands import (
-    extractor,
-    print_publishers,
     db_populator,
-    parse_references,
+    extractor,
+    intersect,
+    list_intersections,
     match_reference,
+    nuke_citations,
+    parse_references,
     print_books,
     print_parsers,
     print_citations,
-    nuke_citations,
+    print_publishers,
 )
 
 
@@ -79,6 +83,10 @@ def run():
         print_citations(args['--book_id'])
     elif args['nuke_citations']:
         nuke_citations(args['--book_id'])
+    elif args['intersect']:
+        intersect()
+    elif args['list_intersections']:
+        list_intersections()
 
 
 def publisher_validator(arg):

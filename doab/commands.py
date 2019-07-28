@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
-from itertools import chain
+from functools import partial
+from itertools import chain, islice
 import json
 import logging
 import os
@@ -9,7 +10,7 @@ from unidecode import unidecode
 
 from doab import const
 from doab.client import DOABOAIClient
-from doab.db import models, session_context
+from doab.db import models, session_context, get_session, get_engine
 from doab.files import FileManager
 from doab.reference_matching import match
 from doab import reference_parsers
@@ -240,3 +241,118 @@ def print_parsers():
     print('Single citation parsers:')
     for parser in reference_parsers.MIXIN_PARSERS:
         print(parser.PARSER_NAME)
+
+
+def intersect(publisher_id=None, workers=0):
+    with session_context() as session:
+        ref_ids = session.query(
+            models.Reference.id
+        ).filter(
+            models.Reference.matched_id == None
+        ).all()
+    msg = "Matching References"
+    # Not thread safe yet
+    results = tasker.run(intersect_reference, ref_ids, msg, 0)
+
+
+def intersect_reference(reference_id):
+    """Intersects all the parses of the reference with the entire DB
+
+    First we fetch all the different parses for this reference, then we `match`
+    them and put all the matches with the original reference onto an intersection
+    """
+    references_matched = set()
+    intersection = None
+
+    with session_context() as session:
+        parses = session.query(
+            models.ParsedReference
+        ).filter(
+            models.ParsedReference.reference_id == reference_id,
+        )
+        for parse in parses:
+            logger.debug(f"Matching with {parse.parser} parser")
+            references_matched |= set(
+                match(parse, session, return_references=True)
+            )
+
+        logger.debug("")
+        references = session.query(
+            models.Reference,
+        ).filter(
+            models.Reference.id.in_(references_matched)
+        )
+        for ref in references:
+            # If any of the references is in an intersection
+            # then all the new matches should be in the same one
+            intersection = ref.intersection
+
+        if not intersection:
+            # If None of the matches is an intersection yet, create one
+            intersection = models.Intersection()
+            session.add(intersection)
+
+        intersection.references.extend(references.all())
+        session.commit()
+
+
+def next_n(n, iterable):
+    """ Returns the next N items from iterable """
+    return list(islice(iterable, n))
+
+
+def chunk_iterable(n, iterable, keys = None):
+    """ Returns an iterator that yields a list of the next n items
+
+    :param int n: The number of items per chunk
+    :param iterable: The iterable to be chunked:
+    :param tuple keys: The keys to be zipped with each chunk
+    """
+    new_iterable = partial(next_n, n, iter(iterable))
+    if keys:
+        return iter(zip(keys, new_iterable), [])
+    else:
+        return iter(new_iterable, [])
+
+
+class ListIntersections():
+    QUERY = """
+    SELECT
+        i.id,
+        count(r.id) AS intersected_ref_ids,
+        string_agg(r.id, '|') AS ref_ids,
+        count(b.book_id) AS intersected_book_ids,
+        string_agg(b.book_id, '|') AS book_ids
+    FROM public.intersection i
+    JOIN public.reference r ON r.matched_id = i.id
+    JOIN public.book_reference b ON b.reference_id = r.id
+    GROUP  BY i.id
+    HAVING count(b.book_id) > 1
+    ORDER BY count(b.book_id) desc;
+    """
+    CHUNK_SIZE = 10
+
+    def __init__(self, session, chunk_size=CHUNK_SIZE):
+        engine = get_engine()
+        self._resultset = engine.execute(self.QUERY)
+        self._iterable = chunk_iterable(
+            chunk_size,
+            self._resultset,
+        )
+
+    def __iter__(self):
+        return self._iterable
+
+def list_intersections():
+    with session_context() as session:
+        intersection_chunks = ListIntersections(session)
+        idx = 0
+        for chunk in intersection_chunks:
+            for id, ref_count, ref_ids, book_count, book_ids in chunk:
+                idx += 1
+                ref_ids = "\n\t - ".join(ref_ids.split("|"))
+                print(f"{idx}. {book_count} books across {ref_count} "
+                      f"matched references.\n - book ids: {book_ids} "
+                      f"\n - Matched References: \n\t - {ref_ids}")
+            input("Press Enter to continue...")
+

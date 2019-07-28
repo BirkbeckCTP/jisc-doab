@@ -5,7 +5,7 @@ from enum import Enum
 import os
 
 # Search weights
-MIN_TITLE_THRESHOLD = 0.85
+MIN_TITLE_THRESHOLD = 0.25
 MIN_AUTHOR_THRESHOLD = 1/2
 
 DOAB_URL = "https://www.doabooks.org"
