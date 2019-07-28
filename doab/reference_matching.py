@@ -44,6 +44,7 @@ def match_by_doi(reference, session):
     return {p.reference_id: p.reference.books for p in parses_matching}
 
 
+
 def match_title_exact(reference, session):
     if "title" not in reference or reference["title"] is None:
         return {}
@@ -55,7 +56,7 @@ def match_title_exact(reference, session):
     return {p.reference_id: p.reference.books for p in parses_matching}
 
 
-def match_fuzzy(reference, session):
+def match_fuzzy(reference):
     title = reference.get("title")
     authors = reference.get("author", "")
     if "title" not in reference or reference["title"] is None:

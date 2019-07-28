@@ -62,6 +62,24 @@ class DOABRecord():
             if extractor is not None
         ]
 
+        # some extractors do not want to be called more than once with different identifiers
+        # the allow_multiple variable allows them to register this and the below removes
+        # multiple instances
+        del_list = []
+        del_names = []
+
+        # build the list of entries to remove
+        for extractor in self.extractors:
+            if not extractor.allow_multiple and extractor not in del_list:
+                del_list.append(extractor)
+
+        # leave the first entry and remove all others
+        for obj in del_list:
+            if obj.IDENTIFIER in del_names:
+                self.extractors.remove(obj)
+            else:
+                del_names.append(obj.IDENTIFIER)
+
     def __str__(self):
         return f"<{self.__class__.__name__}:{self.doab_id}>"
 
@@ -85,6 +103,7 @@ def is_uri(uri):
     except Exception as e:
         print(e)
         return False
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

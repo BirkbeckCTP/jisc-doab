@@ -118,7 +118,8 @@ class ParsedReference(Base):
                'journal': self.journal,
                'volume': self.volume,
                'doi': self.doi,
-               'year': self.year}
+               'year': self.year,
+               'parser': self.parser}
 
         # add the raw reference if this is a bad parse
         if self.title == '' or self.authors == '':

@@ -25,7 +25,8 @@ setuptools.setup(
         "alembic",
         "colorlog",
         "doi2bib",
-        "docopt"
+        "docopt",
+        "crossrefapi"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

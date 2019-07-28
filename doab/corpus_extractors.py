@@ -2,12 +2,18 @@ import logging
 import json
 import re
 import requests
+from bs4 import BeautifulSoup
+
 from doab import const
 
 logger = logging.getLogger(__name__)
 
 
 class BaseExtractor():
+
+    allow_multiple = True
+    IDENTIFIER = 'BaseExtractor'
+
     """ A Base class for extracting content"""
     def __init__(self, record, identifier):
         self.record = record
@@ -24,7 +30,7 @@ class BaseExtractor():
 
 
 class BaseCorpusExtractor(BaseExtractor):
-
+    IDENTIFIER = 'BaseCorpusExtractor'
     def __init__(self, record, identifier):
         super().__init__(record, identifier)
 
@@ -52,7 +58,9 @@ class BaseCorpusExtractor(BaseExtractor):
         """
         raise NotImplementedError
 
+
 class MimeBasedCorpusExtractor(BaseCorpusExtractor):
+    IDENTIFIER = 'MimeBasedCorpusExtractor'
     CONTENT_TYPE = None
     FILE_LABEL = None
 
@@ -73,12 +81,12 @@ class MimeBasedCorpusExtractor(BaseCorpusExtractor):
 
 
 class JSONMetadataExtractor(BaseCorpusExtractor):
+    IDENTIFIER = 'JSONMetadataExtractor'
     METADATA_KEYS = {
         "title", "identifier", "creator",
         "language", "publisher", "date",
         "description",
     }
-    DOI_RE = re.compile(r"/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i")
 
     @classmethod
     def validate_identifier(cls, identifier, doab_record):
@@ -91,7 +99,7 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
         :return: A DOI `str` or `None`
         """
         description = "\n".join(metadata["description"])
-        matches  = re.findall(cls.DOI_RE, description)
+        matches  = re.findall(const.DOI_RE, description)
         if not matches:
             doi = None
         elif len(matches) == 1:
@@ -113,16 +121,19 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
 
 
 class PDFCorpusExtractor(MimeBasedCorpusExtractor):
+    IDENTIFIER = 'PDFCorpusExtractor'
     CONTENT_TYPE = "application/pdf"
     FILE_LABEL = const.RECOGNIZED_BOOK_TYPES['pdf']
 
 
 class EPUBCorpusExtractor(MimeBasedCorpusExtractor):
+    IDENTIFIER = 'EPUBCorpusExtractor'
     CONTENT_TYPE = "application/epub+zip"
     FILE_LABEL = const.RECOGNIZED_BOOK_TYPES['epub']
 
 
 class DebugCorpusExtractor(BaseCorpusExtractor):
+    IDENTIFIER = 'DebugCorpusExtractor'
     @staticmethod
     def validate_identifier(identifier, metadata):
         session = requests.session()
@@ -132,13 +143,78 @@ class DebugCorpusExtractor(BaseCorpusExtractor):
         return False
 
 
+class BloomsburyExtractor(BaseCorpusExtractor):
+    """ Extracts formatted HTML from Bloomsbury Academic
+    """
+
+    allow_multiple = False
+
+    IDENTIFIER = 'BloomsburyExtractor'
+    PUBLISHER_NAME = 'Bloomsbury Academic'
+    HTML_BASE_URL = 'https://www.bloomsburycollections.com'
+    DOI = ''
+
+    @staticmethod
+    def validate_identifier(identifier, doab_record):
+        return doab_record.metadata['publisher'][0] == BloomsburyExtractor.PUBLISHER_NAME
+
+    def extract(self):
+        from doab.client import is_uri
+        identifiers = filter(is_uri, self.record.metadata['identifier'])
+
+        first_run = True
+
+        for identifier in identifiers:
+            try:
+                base = self._fetch(identifier)
+                soup = BeautifulSoup(base, "html.parser")
+                new_regex = '(\/book\/BOOK_TITLE_HERE/.+)'
+                chapter_title_regex = '/book/BOOK_TITLE_HERE/(.+)'
+                title_regex = re.compile(r'\/book\/(.+?).ris')
+
+                for ref in soup.find_all(name='a', attrs={'href': lambda x : x.startswith('/book/') if x else None}):
+                    if first_run:
+                        title = title_regex.search(ref['href']).group(1)
+                        new_regex = new_regex.replace('BOOK_TITLE_HERE', title)
+                        chapter_title_regex = chapter_title_regex.replace('BOOK_TITLE_HERE', title)
+                        first_run = False
+
+                for ref in soup.find_all(name='a', href=re.compile(new_regex)):
+                    if ref and 'href' in ref.attrs and '{page_no}' not in ref['href']:
+                        yield (f'{re.search(chapter_title_regex, ref["href"]).group(1)}.html',
+                               self._fetch(f'{self.HTML_BASE_URL}{ref["href"]}'))
+
+            except requests.exceptions.HTTPError as e:
+                first_run = True
+                if e.response.status_code == 404:
+                    logger.debug(f'Error fetching {self.PUBLISHER_NAME} URL')
+                else:
+                    logger.error(e)
+
+    # TODO: we should abstract out an HTML class that has this fetch method
+    @staticmethod
+    def _fetch(uri):
+        response = requests.get(uri)
+        if response.status_code == 200:
+            return(response.content)
+        else:
+            response.raise_for_status()
+
+    @property
+    def doi(self):
+        # DOIs are the last part of the identifier (suffix/prefix)
+        return self.doi
+
+
 class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
     """ Extracts formatted HTML from CUP
 
     Formatted HTML base:
         https://doi.org/10.1017/CBO<ISBN-13>
     """
+    allow_multiple = False
 
+    IDENTIFIER = 'CambridgeUniversityPressExtractor'
     PUBLISHER_NAME = 'Cambridge University Press'
     HTML_BASE_URL = 'https://doi.org/10.1017/CBO'
 
@@ -173,6 +249,7 @@ class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
         # DOIs are the last part of the identifier (suffix/prefix)
         return "/".join(self.identifier.split("/")[-2:])
 
+
 class SpringerCorpusExtractor(BaseCorpusExtractor):
     """ Extracts PDF and EPUB book files
 
@@ -185,6 +262,7 @@ class SpringerCorpusExtractor(BaseCorpusExtractor):
     """
     PDF_BASE_URL = "https://link.springer.com/content/pdf/"
     EPUB_BASE_URL = "https://link.springer.com/download/epub/"
+    IDENTIFIER = 'SpringerCorpusExtractor'
 
     @staticmethod
     def validate_identifier(identifier, doab_record):
@@ -225,6 +303,7 @@ CORPUS_EXTRACTORS = [
     EPUBCorpusExtractor,
     SpringerCorpusExtractor,
     CambridgeUniversityPressExtractor,
+    BloomsburyExtractor
 ]
 
 

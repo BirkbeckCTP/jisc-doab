@@ -5,6 +5,9 @@ import logging
 import os
 import shutil
 import subprocess
+from os.path import isfile
+
+from crossref.restful import Works
 
 from bs4 import BeautifulSoup
 from bibtexparser.bparser import BibTexParser
@@ -161,6 +164,109 @@ class HTTPBasedParserMixin(BaseReferenceParser):
         return response
 
 
+class BloomsburyAcademicMixin(BaseReferenceParser):
+    HTML_FILTER = (None, None)
+    PARSER_NAME = ''
+
+    def __init__(self, book_id, book_path, *args, **kwargs):
+        super().__init__(book_id, book_path, *args, **kwargs)
+        book_files = [f for f in os.listdir(book_path) if isfile(os.path.join(book_path, f))]
+        self.file_managers = [
+            FileManager(os.path.join(book_path, book_file))
+            for book_file in book_files
+            if '.html' in book_file
+            ]
+
+    def prepare(self):
+        for file_manager in self.file_managers:
+            content = file_manager.read()
+
+            soup = BeautifulSoup(content, "html.parser")
+            self.process_soup(soup)
+
+    def parse(self):
+        crossref_handler = CrossrefParserMixin(self.book_id, self.book_path)
+
+        for ref in self.references:
+            parsed = self.parse_reference(ref)
+
+            logger.debug(f'{self.PARSER_NAME} parsed: {parsed}')
+            self.references[ref].append((self.PARSER_NAME, parsed))
+
+            # delegate to crossref handler if we have a DOI
+            if 'doi' in parsed:
+                doi = crossref_handler.parse_reference(parsed['doi'])
+                if doi:
+                    logger.debug(f'{crossref_handler.PARSER_NAME} parsed: {doi}')
+                    self.references[ref].append((crossref_handler.PARSER_NAME, doi))
+
+    def parse_reference(cls, reference):
+        # create a soup version of the reference
+        souped = BeautifulSoup(reference, 'html.parser')
+        formatted_reference = {}
+
+        # authors (and editors)
+        authors = []
+        for soup_author in souped.find_all('span', {'class': 'author'}):
+            try:
+                authors.append(f'{soup_author.find("span", {"class":"firstname"}).get_text()} '
+                               f'{soup_author.find("span", {"class":"surname"}).get_text()}')
+            except:
+                pass
+        for soup_author in souped.find_all('span', {'class': 'editor'}):
+            try:
+                authors.append(f'{soup_author.find("span", {"class":"firstname"}).get_text()} '
+                               f'{soup_author.find("span", {"class":"surname"}).get_text()}')
+            except:
+                pass
+        formatted_reference['author'] = ' ,'.join(authors)
+
+        # year
+        try:
+            formatted_reference['year'] = souped.find('span', {'class': 'pubdate'}).get_text()
+        except:
+            formatted_reference['year'] = ''
+
+        # we initially populate title and journal with the same field
+        try:
+            formatted_reference['title'] = souped.find('span', {'class': 'italic'}).get_text()
+            formatted_reference['journal'] = souped.find('span', {'class': 'italic'}).get_text()
+        except:
+            formatted_reference['title'] = ''
+            formatted_reference['journal'] = ''
+
+        # volume
+        try:
+            formatted_reference['volume'] = souped.find('span', {'class': 'volumenum'}).get_text()
+        except:
+            formatted_reference['volume'] = ''
+
+        # determine the type of entry
+        # if it contains ", in", it's a book chapter
+        book_regex = re.compile(r'‘(<i>)*(.+?)(<\/i>)*(<\/span>)*’, in')
+        match = book_regex.search(reference)
+        is_book = False
+        if match:
+            is_book = True
+            formatted_reference['title'] = match.group(2)
+
+        # journal articles
+        journal_regex = re.compile(r'‘(.+?)’(<\/span>), <span')
+        match = journal_regex.search(reference)
+        if match:
+            formatted_reference['title'] = match.group(1)
+        elif not is_book:
+            formatted_reference['journal'] = ''
+
+        return formatted_reference
+
+    def process_soup(self, soup):
+        tag, attributes = self.HTML_FILTER
+        for ref in soup.find_all(name=tag, attrs=attributes):
+            clean = self.clean(str(ref))
+            self.references[clean] = []
+
+
 class CambridgeCoreMixin(BaseReferenceParser):
     HTML_FILTER = (None, None)
     PARSER_NAME = ''
@@ -190,10 +296,19 @@ class CambridgeCoreMixin(BaseReferenceParser):
     def parse(self):
         del_list = []
 
+        crossref_handler = CrossrefParserMixin(self.book_id, self.book_path)
+
         for ref in self.references:
             parsed = self.parse_reference(ref)
-            logger.debug(f'Parsed: {parsed}')
+            logger.debug(f'{self.PARSER_NAME} parsed: {parsed}')
             self.references[ref].append((self.PARSER_NAME, parsed))
+
+            # delegate to crossref handler if we have a DOI
+            if 'doi' in parsed:
+                doi = crossref_handler.parse_reference(parsed['doi'])
+                if doi:
+                    logger.debug(f'{crossref_handler.PARSER_NAME} parsed: {doi}')
+                    self.references[ref].append((crossref_handler.PARSER_NAME, doi))
 
     def parse_reference(cls, reference):
         reference_json = json.loads(reference)
@@ -276,20 +391,43 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
     def parse(self):
         # using the Crossref approved single DOI: https://www.crossref.org/blog/dois-and-matching-regular-expressions/
         # 'for the 74.9M DOIs we have seen this matches 74.4M of them'
-        crossref_doi_re = re.compile(r'/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i')
-        for ref, parse in self.references.items():
-            crossref_match = crossref_doi_re.search(ref)
-            if crossref_match:
-                logger.debug(crossref_match)
+
+        for ref in self.references:
+            parsed = self.parse_reference(ref)
+            logger.debug(f'Parsed: {parsed}')
+            self.references[ref].append((self.PARSER_NAME, parsed))
 
     @classmethod
     def parse_reference(cls, reference, bibtex_parser=None):
-        if bibtex_parser is None:
-            bibtex_parser = BibTexParser()
-        #bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
-        #logger.debug(f"Bibtex {bibtex_reference}")
-        #return bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
-        return None
+        crossref_match = const.DOI_RE.search(reference)
+        ret = {'parser': cls.PARSER_NAME,
+               'raw_reference': reference}
+
+        if crossref_match:
+            works = Works(etiquette=const.CROSSREF_ETIQUETTE)
+            doi = works.doi(crossref_match.group(0))
+
+            if doi:
+
+                ret['doi'] = crossref_match.group(0)
+
+                ret['author'] = ''
+                if 'author' in doi:
+                    ret['author'] = ', '.join([f'{author["given"]} {author["family"]}' for author in doi['author']])
+
+                if 'title' in doi:
+                    ret['title'] = doi['title'][0]
+
+                if 'container-title' in doi and len(doi['container-title']) > 0:
+                    ret['journal'] = doi['container-title'][0]
+
+                if 'volume' in doi:
+                    ret['volume'] = doi['volume'][0]
+
+                if 'published-online' in doi:
+                    ret['year'] = doi['published-online']['date-parts'][0][0]
+
+        return ret
 
 
 class CermineParserMixin(SubprocessParserMixin):
@@ -362,6 +500,9 @@ class PublisherSpecificMixin(object):
             filetypes = FileManager(os.path.join(input_path, book.doab_id)).types
 
             for filetype in cls.FILE_TYPES:
+                if filetype == 'all':
+                    return True
+
                 if filetype not in filetypes:
                     return False
 
@@ -389,6 +530,21 @@ class CambridgeCoreParser(CambridgeCoreMixin, PublisherSpecificMixin):
     PARSER_NAME = 'Cambridge Core'
 
 
+class BloomsburyAcademicParser(BloomsburyAcademicMixin, PublisherSpecificMixin):
+    accuracy = 75
+    # <div class="contribution bibliomixed"><a name="ba-9781849661027-bib31"></a><p class="contribution bibliomixed"><a class="openurl" target="_blank" data-href="?genre=bookitem&amp;title=Democracy and the Rule of Law&amp;atitle=Lineages of the Rule of Law&amp;aulast=Maravall&amp;aufirst=J.&amp;volume=&amp;issue=&amp;pages=&amp;date=2003">
+    #       					Find in Library
+    #       				</a><span class="bibliomset"><span class="author"><span class="surname">Holmes</span>, <span class="firstname">S.</span></span>
+    #       (<span class="pubdate">2003</span>) ‘<i>Lineages of the Rule of Law</i></span>’, in <span class="bibliomset"><span class="editor"><span class="last-first personname"><span class="surname">Maravall</span>, <span class="firstname">J.</span></span></span>
+    #       and <span class="editor"><span class="last-first personname"><span class="surname">Przeworksi</span>, <span class="firstname">A.</span></span></span>
+    #       (eds), <i><span class="italic emphasis">Democracy and the Rule of Law</span></i>. <span class="address"><span class="city">Cambridge</span></span>:
+    #       <span class="publishername">Cambridge University Press</span></span>.</p></div>
+    HTML_FILTER = ("div", {"class": "bibliomixed"})
+    PUBLISHER_NAMES = ['{"Bloomsbury Academic"}']
+    FILE_TYPES = ['all']
+    PARSER_NAME = 'Bloomsbury Academic'
+
+
 def yield_parsers(book, input_path):
     parsers = []
     for parser in PARSERS:
@@ -397,7 +553,7 @@ def yield_parsers(book, input_path):
     return parsers
 
 
-PARSERS = [PalgraveEPUBParser, CambridgeCoreParser]
+PARSERS = [PalgraveEPUBParser, CambridgeCoreParser, BloomsburyAcademicParser]
 MIXIN_PARSERS = [CermineParserMixin, CrossrefParserMixin]
 
 
