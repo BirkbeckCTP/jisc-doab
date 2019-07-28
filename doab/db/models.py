@@ -1,6 +1,8 @@
 """
 ORM models for the persistence of DOAB metadata objects
 """
+from uuid import uuid4
+
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -62,7 +64,7 @@ class Book(Base):
     )
 
     identifiers = relationship("Identifier", backref="book")
-    intersection = relationship("Reference", backref="book", uselist=False)
+    intersection = relationship("Intersection", backref="book", uselist=False)
 
     def parsers(self, input_path=const.DEFAULT_OUT_DIR):
         return yield_parsers(self, input_path)
@@ -151,8 +153,12 @@ class Author(Base):
     reference_name = Column(String)
 
 
+def generate_uuid():
+    return str(uuid4())
+
+
 class Intersection(Base):
     __tablename__ = "intersection"
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, default=generate_uuid)
     book_id = Column(String, ForeignKey("book.doab_id"), nullable=True)
     references = relationship("Reference", backref="intersection")
