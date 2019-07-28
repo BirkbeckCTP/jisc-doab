@@ -3,6 +3,7 @@ bibtexparser==1.1.0
 bs4==0.0.1
 certifi==2019.6.16
 chardet==3.0.4
+crossrefapi
 docopt
 doi2bib
 EbookLib==0.17.1

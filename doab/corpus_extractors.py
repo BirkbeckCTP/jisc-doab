@@ -78,7 +78,6 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
         "language", "publisher", "date",
         "description",
     }
-    DOI_RE = re.compile(r"/^10.\d{4,9}/[-._;()/:A-Z0-9]+$/i")
 
     @classmethod
     def validate_identifier(cls, identifier, doab_record):
@@ -91,7 +90,7 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
         :return: A DOI `str` or `None`
         """
         description = "\n".join(metadata["description"])
-        matches  = re.findall(cls.DOI_RE, description)
+        matches  = re.findall(const.DOI_RE, description)
         if not matches:
             doi = None
         elif len(matches) == 1:
