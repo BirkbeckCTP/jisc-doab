@@ -56,7 +56,7 @@ def match_title_exact(reference, session):
     return {p.reference_id: p.reference.books for p in parses_matching}
 
 
-def match_fuzzy(reference):
+def match_fuzzy(reference, session):
     title = reference.get("title")
     authors = reference.get("author", "")
     if "title" not in reference or reference["title"] is None:
