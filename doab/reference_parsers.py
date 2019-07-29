@@ -251,11 +251,18 @@ class BloomsburyAcademicMixin(BaseReferenceParser):
             is_book = True
             formatted_reference['title'] = match.group(2)
 
-        # journal articles
-        journal_regex = re.compile(r'‘(.+?)’', re.MULTILINE | re.DOTALL)
-        match = journal_regex.search(reference)
-        if match:
-            formatted_reference['title'] = match.group(1)
+        if not is_book:
+            # journal articles
+            journal_regex = re.compile(r'atitle=(.+?)&', re.MULTILINE | re.DOTALL)
+            match = journal_regex.search(reference)
+            if match and not '&amp;aulast' in match.group(1):
+                print(match.group(1))
+                formatted_reference['title'] = match.group(1)
+            else:
+                journal_regex = re.compile(r'‘(.+?)’', re.MULTILINE | re.DOTALL)
+                match = journal_regex.search(reference)
+                if match:
+                    formatted_reference['title'] = match.group(1)
 
         return formatted_reference
 
