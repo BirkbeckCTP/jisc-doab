@@ -270,6 +270,11 @@ def intersect(publisher_id=None, workers=0):
     results = tasker.run(intersect_reference, ref_ids, msg, 0)
 
 
+def nuke_intersections():
+    with session_context() as session:
+        session.query(models.Intersection).delete()
+        session.commit()
+
 def intersect_reference(reference_id):
     """Intersects all the parses of the reference with the entire DB
 

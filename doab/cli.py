@@ -10,6 +10,7 @@ Usage:
   cli.py list_publishers [options]
   cli.py list_parsers [options]
   cli.py nuke_citations [--book_id=BOOK_IDS...] [options]
+  cli.py nuke_intersections [--book_id=BOOK_IDS...] [options]
   cli.py intersect [options]
   cli.py list_intersections [options]
 
@@ -33,6 +34,7 @@ from doab.commands import (
     list_intersections,
     match_reference,
     nuke_citations,
+    nuke_intersections,
     parse_references,
     print_books,
     print_parsers,
@@ -81,6 +83,8 @@ def run():
         print_parsers()
     elif args['list_citations']:
         print_citations(args['--book_id'])
+    elif args['nuke_intersections']:
+        nuke_intersections()
     elif args['nuke_citations']:
         nuke_citations(args['--book_id'])
     elif args['intersect']:
