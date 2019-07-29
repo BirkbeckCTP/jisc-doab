@@ -349,10 +349,24 @@ def list_intersections():
         idx = 0
         for chunk in intersection_chunks:
             for id, ref_count, ref_ids, book_count, book_ids in chunk:
-                idx += 1
-                ref_ids = "\n\t - ".join(ref_ids.split("|"))
-                print(f"{idx}. {book_count} books across {ref_count} "
-                      f"matched references.\n - book ids: {book_ids} "
-                      f"\n - Matched References: \n\t - {ref_ids}")
-            input("Press Enter to continue...")
 
+                idx += 1
+                ref_ids = ref_ids.split("|")
+                print(f"{idx}. {book_count} books across {ref_count} "
+                      f"matched references.\n - book ids: {book_ids} ")
+
+                try:
+                    for ref_id in ref_ids:
+                        ref = session.query(
+                            models.ParsedReference
+                        ).filter(models.ParsedReference.reference_id == ref_id).one()
+                        print(f"{ref}")
+                except:
+                    pass
+                finally:
+                    pass
+
+                #print(f"{idx}. {book_count} books across {ref_count} "
+                #      f"matched references.\n - book ids: {book_ids} "
+                #      f"\n - Matched References: \n\t - {ref_ids}")
+            #input("Press Enter to continue...")
