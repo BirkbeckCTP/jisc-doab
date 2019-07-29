@@ -132,6 +132,7 @@ class BaseReferenceParser(object):
         logger.debug(f"Cleaning {reference}")
         without_newlines = reference.replace("\u200b", "").replace("\n", " ")
         without_redundant_space = " ".join(without_newlines.split())
+        logger.debug(f"Cleaned to: {without_redundant_space}")
         return without_redundant_space
 
 
@@ -243,7 +244,7 @@ class BloomsburyAcademicMixin(BaseReferenceParser):
 
         # determine the type of entry
         # if it contains ", in", it's a book chapter
-        book_regex = re.compile(r'‘(<i>)*(.+?)(<\/i>)*(<\/span>)*’, in')
+        book_regex = re.compile(r'‘(<i>)*(.+?)(<\/i>)*(<\/span>)*’, in', re.MULTILINE | re.DOTALL)
         match = book_regex.search(reference)
         is_book = False
         if match:
@@ -251,10 +252,10 @@ class BloomsburyAcademicMixin(BaseReferenceParser):
             formatted_reference['title'] = match.group(2)
 
         # journal articles
-        journal_regex = re.compile(r'‘(.+?)’(<\/span>), <span')
+        journal_regex = re.compile(r'‘(.+?)’', re.MULTILINE | re.DOTALL)
         match = journal_regex.search(reference)
         if match:
-            formatted_reference['journal'] = match.group(1)
+            formatted_reference['title'] = match.group(1)
 
         return formatted_reference
 
