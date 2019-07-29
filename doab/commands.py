@@ -373,8 +373,8 @@ def list_intersections():
                 try:
                     for ref_id in ref_ids:
                         ref = session.query(
-                            models.ParsedReference
-                        ).filter(models.ParsedReference.reference_id == ref_id).one()
+                            models.Reference
+                        ).filter(models.Reference.id == ref_id).one()
                         print(f"{ref}")
                 except:
                     pass
