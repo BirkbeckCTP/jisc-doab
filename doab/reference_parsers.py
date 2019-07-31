@@ -89,30 +89,31 @@ class BaseReferenceParser(object):
                     session.commit()
                     continue
                 parser_type, parsed = parse
-                try:
-                    parsed_reference = session.query(
-                        models.ParsedReference
-                    ).filter(
-                        models.ParsedReference.reference_id==reference.id,
-                        models.ParsedReference.parser==parser_type,
-                    ).one()
+                if parsed:
+                    try:
+                        parsed_reference = session.query(
+                            models.ParsedReference
+                        ).filter(
+                            models.ParsedReference.reference_id==reference.id,
+                            models.ParsedReference.parser==parser_type,
+                        ).one()
 
-                    logger.debug("Existing reference found. Ignoring. Use nuke command to update.")
-                except NoResultFound:
-                    parsed_reference = models.ParsedReference(
-                        reference_id=reference.id,
-                        raw_reference=ref,
-                        parser=parser_type,
-                        authors=parsed.get("author"),
-                        title=parsed.get("title"),
-                        pages=parsed.get("pages"),
-                        journal=parsed.get("journal"),
-                        volume=parsed.get("volume"),
-                        doi=parsed.get("doi"),
-                        year=parsed.get("year"),
-                    )
-                    session.add(parsed_reference)
-                session.commit()
+                        logger.debug("Existing reference found. Ignoring. Use nuke command to update.")
+                    except NoResultFound:
+                        parsed_reference = models.ParsedReference(
+                            reference_id=reference.id,
+                            raw_reference=ref,
+                            parser=parser_type,
+                            authors=parsed.get("author"),
+                            title=parsed.get("title"),
+                            pages=parsed.get("pages"),
+                            journal=parsed.get("journal"),
+                            volume=parsed.get("volume"),
+                            doi=parsed.get("doi"),
+                            year=parsed.get("year"),
+                        )
+                        session.add(parsed_reference)
+                    session.commit()
 
     def echo(self):
         """Prints parse results to stdout"""
