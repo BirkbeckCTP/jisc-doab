@@ -280,6 +280,8 @@ def intersect_reference(reference_id):
 
     First we fetch all the different parses for this reference, then we `match`
     them and put all the matches with the original reference onto an intersection
+
+    WRITES ARE NOT THREAD SAFE
     """
     references_matched = set()
     intersection = None
@@ -296,19 +298,22 @@ def intersect_reference(reference_id):
                 match(parse, session, return_references=True)
             )
 
-        logger.debug("")
         references = session.query(
             models.Reference,
         ).filter(
             models.Reference.id.in_(references_matched)
+        ).order_by(
+            models.Reference.matched_id
         )
-        for ref in references:
-            # If any of the references is in an intersection
-            # then all the new matches should be in the same one
-            intersection = ref.intersection
 
+        # If any of the references is in an intersection
+        # then all the new matches should be in the same one
+        first_match = references.first()
+        if not first_match:
+            return
+
+        intersection = first_match.intersection
         if not intersection:
-            # If None of the matches is an intersection yet, create one
             intersection = models.Intersection()
             session.add(intersection)
 
