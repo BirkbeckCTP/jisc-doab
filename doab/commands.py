@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from itertools import chain, islice
+from itertools import islice
 import json
 import logging
 import os
@@ -10,7 +10,7 @@ from unidecode import unidecode
 
 from doab import const
 from doab.client import DOABOAIClient
-from doab.db import models, session_context, get_session, get_engine
+from doab.db import models, session_context, get_engine
 from doab.files import FileManager
 from doab.reference_matching import match
 from doab import reference_parsers
@@ -338,17 +338,16 @@ def chunk_iterable(n, iterable, keys = None):
 class ListIntersections():
     QUERY = """
     SELECT
-        i.id,
-        count(r.id) AS intersected_ref_ids,
+        count(pr.reference_id) AS total_refs,
         string_agg(r.id, '|') AS ref_ids,
-        count(b.book_id) AS intersected_book_ids,
-        string_agg(b.book_id, '|') AS book_ids
-    FROM public.intersection i
-    JOIN public.reference r ON r.matched_id = i.id
+        count(distinct b.book_id) total_books,
+        string_agg(distinct b.book_id, '|') AS book_ids
+    FROM public.reference r
+    JOIN public.parsed_reference pr on pr.reference_id = r.id
     JOIN public.book_reference b ON b.reference_id = r.id
-    GROUP  BY i.id
+    GROUP  BY r.matched_id
     HAVING count(b.book_id) > 1
-    ORDER BY count(b.book_id) desc;
+    ORDER BY count(distinct b.book_id) desc;
     """
     CHUNK_SIZE = 10
 
@@ -368,25 +367,13 @@ def list_intersections():
         intersection_chunks = ListIntersections(session)
         idx = 0
         for chunk in intersection_chunks:
-            for id, ref_count, ref_ids, book_count, book_ids in chunk:
-
+            for ref_count, ref_ids, book_count, book_ids in chunk:
                 idx += 1
-                ref_ids = ref_ids.split("|")
+                ref_ids_list = ref_ids.split("|")
                 print(f"{idx}. {book_count} books across {ref_count} "
-                      f"matched references.\n - book ids: {book_ids} ")
-
-                try:
-                    for ref_id in ref_ids:
-                        ref = session.query(
-                            models.Reference
-                        ).filter(models.Reference.id == ref_id).one()
-                        print(f"{ref}")
-                except:
-                    pass
-                finally:
-                    pass
-
-                #print(f"{idx}. {book_count} books across {ref_count} "
-                #      f"matched references.\n - book ids: {book_ids} "
-                #      f"\n - Matched References: \n\t - {ref_ids}")
-            #input("Press Enter to continue...")
+                      f"matched references. book ids: {book_ids} ")
+                refs = session.query(
+                        models.Reference
+                    ).filter(models.Reference.id.in_(ref_ids_list))
+                for ref in refs:
+                    logger.debug(f"{ref}")
