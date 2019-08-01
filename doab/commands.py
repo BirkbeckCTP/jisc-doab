@@ -155,22 +155,37 @@ def upsert_identifier(session, identifier_str):
 
 def nuke_citations(book_ids=None):
     with session_context() as session:
-        for book_id in book_ids:
-            # fetch book metadata
-            try:
-                book = session.query(
-                    models.Book
-                ).filter(models.Book.doab_id == str(book_id)).one()
+        if not book_ids:
+            books = session.query(models.Book).all()
+            for book in books:
+                try:
+                    for reference in book.references:
+                        for parsed_ref in reference.parsed_references:
+                            session.delete(parsed_ref)
+                        session.delete(reference)
 
-                for reference in book.references:
-                    for parsed_ref in reference.parsed_references:
-                        session.delete(parsed_ref)
-                    session.delete(reference)
+                    session.commit()
+                    print(f'Nuked references for book {book.doab_id}')
+                except NoResultFound:
+                    logger.error(f'Error retrieving book {book.doab_id}.')
+        else:
 
-                session.commit()
-                print(f'Nuked references for book {book.doab_id}')
-            except NoResultFound:
-                logger.error(f'Error retrieving book {book_id}.')
+            for book_id in book_ids:
+                # fetch book metadata
+                try:
+                    book = session.query(
+                        models.Book
+                    ).filter(models.Book.doab_id == str(book_id)).one()
+
+                    for reference in book.references:
+                        for parsed_ref in reference.parsed_references:
+                            session.delete(parsed_ref)
+                        session.delete(reference)
+
+                    session.commit()
+                    print(f'Nuked references for book {book.doab_id}')
+                except NoResultFound:
+                    logger.error(f'Error retrieving book {book_id}.')
 
 
 def print_citations(book_ids=None):
@@ -349,10 +364,24 @@ def list_intersections():
         idx = 0
         for chunk in intersection_chunks:
             for id, ref_count, ref_ids, book_count, book_ids in chunk:
-                idx += 1
-                ref_ids = "\n\t - ".join(ref_ids.split("|"))
-                print(f"{idx}. {book_count} books across {ref_count} "
-                      f"matched references.\n - book ids: {book_ids} "
-                      f"\n - Matched References: \n\t - {ref_ids}")
-            input("Press Enter to continue...")
 
+                idx += 1
+                ref_ids = ref_ids.split("|")
+                print(f"{idx}. {book_count} books across {ref_count} "
+                      f"matched references.\n - book ids: {book_ids} ")
+
+                try:
+                    for ref_id in ref_ids:
+                        ref = session.query(
+                            models.Reference
+                        ).filter(models.Reference.id == ref_id).one()
+                        print(f"{ref}")
+                except:
+                    pass
+                finally:
+                    pass
+
+                #print(f"{idx}. {book_count} books across {ref_count} "
+                #      f"matched references.\n - book ids: {book_ids} "
+                #      f"\n - Matched References: \n\t - {ref_ids}")
+            #input("Press Enter to continue...")

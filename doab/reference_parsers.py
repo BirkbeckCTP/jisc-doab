@@ -254,9 +254,7 @@ class BloomsburyAcademicMixin(BaseReferenceParser):
         journal_regex = re.compile(r'‘(.+?)’(<\/span>), <span')
         match = journal_regex.search(reference)
         if match:
-            formatted_reference['title'] = match.group(1)
-        elif not is_book:
-            formatted_reference['journal'] = ''
+            formatted_reference['journal'] = match.group(1)
 
         return formatted_reference
 
