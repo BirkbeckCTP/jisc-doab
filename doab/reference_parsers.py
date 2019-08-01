@@ -263,7 +263,8 @@ class BloomsburyAcademicMixin(BaseReferenceParser):
                 match = journal_regex.search(reference)
                 if match:
                     formatted_reference['title'] = match.group(1)
-
+        if not formatted_reference["title"]:
+            import pdb;pdb.set_trace()
         return formatted_reference
 
     def process_soup(self, soup):
