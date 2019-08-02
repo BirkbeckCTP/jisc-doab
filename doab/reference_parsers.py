@@ -388,7 +388,7 @@ class EPUBPrepareMixin(BaseReferenceParser):
 
 class CrossrefParserMixin(HTTPBasedParserMixin):
     accuracy = 100
-    PARSER_NAME = 'Crossref'
+    PARSER_NAME = const.CROSSREF
     """A parser that matches DOIS and retrieves metadata via Crossref API"""
 
     def prepare(self):
@@ -438,7 +438,7 @@ class CrossrefParserMixin(HTTPBasedParserMixin):
 
 class CermineParserMixin(SubprocessParserMixin):
     accuracy = 50
-    PARSER_NAME = 'Cermine'
+    PARSER_NAME = const.CERMINE
     CMD = "cermine"
     ARGS = [
         "pl.edu.icm.cermine.bibref.CRFBibReferenceParser",
@@ -523,7 +523,7 @@ class PalgraveEPUBParser(CermineParserMixin, EPUBPrepareMixin, PublisherSpecific
     HTML_FILTER = ("div", {"class": "CitationContent"})
     PUBLISHER_NAMES = ['{"Palgrave Macmillan"}']
     FILE_TYPES = ['epub']
-    PARSER_NAME = 'Palgrave Epub'
+    PARSER_NAME = const.PALGRAVE_EPUB
 
 
 class CambridgeCoreParser(CambridgeCoreMixin, PublisherSpecificMixin):
@@ -533,7 +533,7 @@ class CambridgeCoreParser(CambridgeCoreMixin, PublisherSpecificMixin):
     HTML_FILTER = ("meta", {"name": "citation_reference"})
     PUBLISHER_NAMES = ['{"Cambridge University Press"}']
     FILE_TYPES = ['CambridgeCore']
-    PARSER_NAME = 'Cambridge Core'
+    PARSER_NAME = const.CAMBRIDGE_CORE
 
 
 class BloomsburyAcademicParser(BloomsburyAcademicMixin, PublisherSpecificMixin):
@@ -548,7 +548,7 @@ class BloomsburyAcademicParser(BloomsburyAcademicMixin, PublisherSpecificMixin):
     HTML_FILTER = ("div", {"class": "bibliomixed"})
     PUBLISHER_NAMES = ['{"Bloomsbury Academic"}']
     FILE_TYPES = ['all']
-    PARSER_NAME = 'Bloomsbury Academic'
+    PARSER_NAME = const.BLOOMSBURY_ACADEMIC
 
 
 def yield_parsers(book, input_path):

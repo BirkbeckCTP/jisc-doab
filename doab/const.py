@@ -28,6 +28,14 @@ RECOGNIZED_BOOK_TYPES = {
 }
 
 
+#Parser Names:
+CERMINE = "Cermine"
+CROSSREF = "Crossref"
+PALGRAVE_EPUB = "Palgrave Epub"
+CAMBRIDGE_CORE = "Cambridge Core"
+BLOOMSBURY_ACADEMIC = "Bloomsbury Academic"
+
+
 class Publisher(Enum):
     CAMBRIDGE_UNIVERSITY_PRESS = 1244
     OXFORD_UNIVERSITY_PRESS = 1210
