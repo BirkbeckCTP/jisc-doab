@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from doab import const
+from doab.concurrency import get_http_session
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class BaseExtractor():
 
 class BaseCorpusExtractor(BaseExtractor):
     IDENTIFIER = 'BaseCorpusExtractor'
+
     def __init__(self, record, identifier):
         super().__init__(record, identifier)
 
@@ -57,6 +59,20 @@ class BaseCorpusExtractor(BaseExtractor):
         (filename, data_blob)
         """
         raise NotImplementedError
+
+
+class HTTPCorpusExtractorMixin(BaseCorpusExtractor):
+    """ A Mixin that adds adds a session based HTTP client """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._session = get_http_session()
+
+    def _fetch(self, uri):
+        response = self._session.get(uri)
+        if response.ok:
+            return(response.content)
+        else:
+            response.raise_for_status()
 
 
 class MimeBasedCorpusExtractor(BaseCorpusExtractor):
@@ -90,7 +106,8 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
 
     @classmethod
     def validate_identifier(cls, identifier, doab_record):
-        return identifier.startswith("https://www.doabooks.org/doab?func=search")
+        return identifier.startswith(
+            "https://www.doabooks.org/doab?func=search")
 
     @classmethod
     def get_doi_from_metadata(cls, metadata):
@@ -143,7 +160,7 @@ class DebugCorpusExtractor(BaseCorpusExtractor):
         return False
 
 
-class BloomsburyExtractor(BaseCorpusExtractor):
+class BloomsburyExtractor(HTTPCorpusExtractorMixin, BaseCorpusExtractor):
     """ Extracts formatted HTML from Bloomsbury Academic
     """
 
@@ -191,22 +208,15 @@ class BloomsburyExtractor(BaseCorpusExtractor):
                 else:
                     logger.error(e)
 
-    # TODO: we should abstract out an HTML class that has this fetch method
-    @staticmethod
-    def _fetch(uri):
-        response = requests.get(uri)
-        if response.status_code == 200:
-            return(response.content)
-        else:
-            response.raise_for_status()
-
     @property
     def doi(self):
         # DOIs are the last part of the identifier (suffix/prefix)
         return self.doi
 
 
-class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
+class CambridgeUniversityPressExtractor(
+    HTTPCorpusExtractorMixin, BaseCorpusExtractor
+):
     """ Extracts formatted HTML from CUP
 
     Formatted HTML base:
@@ -235,14 +245,6 @@ class CambridgeUniversityPressExtractor(BaseCorpusExtractor):
                     logger.debug('No Cambridge Core URL for ISBN {0}'.format(isbn))
                 else:
                     logger.error(e)
-
-    @staticmethod
-    def _fetch(uri):
-        response = requests.get(uri)
-        if response.status_code == 200:
-            return(response.content)
-        else:
-            response.raise_for_status()
 
     @property
     def doi(self):
