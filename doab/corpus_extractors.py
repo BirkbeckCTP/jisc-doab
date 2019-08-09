@@ -115,6 +115,9 @@ class JSONMetadataExtractor(BaseCorpusExtractor):
         :param metadata: A `Mapping` from metadata keys to metadata values
         :return: A DOI `str` or `None`
         """
+        if not metadata["description"]:
+            return None
+
         description = "\n".join(metadata["description"])
         matches  = re.findall(const.DOI_RE, description)
         if not matches:
@@ -274,6 +277,15 @@ class SpringerCorpusExtractor(BaseCorpusExtractor):
         try:
             uri = f"{self.PDF_BASE_URL}{self.doi}.pdf"
             yield(const.RECOGNIZED_BOOK_TYPES['pdf'], self._fetch(uri))
+        except requests.exceptions.HTTPError as e:
+            # Some chapters are flagged as books leading to these
+            # requests returning a 404
+            if e.response.status_code == 404:
+                logger.debug(e)
+            else:
+                logger.error(e)
+
+        try:
             uri = f"{self.EPUB_BASE_URL}{self.doi}.epub"
             yield(const.RECOGNIZED_BOOK_TYPES['epub'], self._fetch(uri))
         except requests.exceptions.HTTPError as e:
@@ -298,6 +310,11 @@ class SpringerCorpusExtractor(BaseCorpusExtractor):
         return "/".join(self.identifier.split("/")[-2:])
 
 
+class UPExtractor(BaseCorpusExtractor):
+
+    def validate_identifier(identifier, doab_record):
+        return False
+
 CORPUS_EXTRACTORS = [
     #DebugCorpusExtractor,
     JSONMetadataExtractor,
@@ -305,7 +322,8 @@ CORPUS_EXTRACTORS = [
     EPUBCorpusExtractor,
     SpringerCorpusExtractor,
     CambridgeUniversityPressExtractor,
-    BloomsburyExtractor
+    BloomsburyExtractor,
+    UPExtractor,
 ]
 
 

@@ -75,7 +75,7 @@ def match_fuzzy(reference, session):
     #refine with autors
     matches = []
     for parse, distance in parses_matching:
-        logger.debug(f"Match score {distance}: '{title} || {parse.title}'")
+        logger.debug(f"Match distance {distance}: '{title} || {parse.title}'")
         if (
             (distance <= const.MIN_TITLE_THRESHOLD)
             or match_authors_fuzzy(authors, parse)
@@ -94,6 +94,7 @@ def match_authors_fuzzy(authors, parse):
     string and determine the match based on arbitrary similarity weight
     """
     if not (authors and parse.authors):
+        logger.debug("No authors available for matching")
         return False
 
     matched_names = set()
@@ -110,12 +111,14 @@ def match_authors_fuzzy(authors, parse):
     logger.debug(f"Matched names: {matched_names}")
 
     try:
-        return (
+        matched = (
             len(matched_names)/len(names|initials)
             >= const.MIN_AUTHOR_THRESHOLD
         )
     except ZeroDivisionError:
         return False
+    logger.debug(f"Authors match: {matched} ({authors} || {parse.authors})")
+    return matched
 
 def _split_names_initials(authors):
     author_names = set(re.compile(r'\w+').findall(authors))
