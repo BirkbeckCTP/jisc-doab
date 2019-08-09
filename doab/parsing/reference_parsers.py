@@ -1,8 +1,5 @@
 import json
-from itertools import chain
 import logging
-import shutil
-import subprocess
 import re
 
 from bibtexparser.bparser import BibTexParser
@@ -11,11 +8,12 @@ from crossref.restful import Works
 import requests
 
 from doab import const
+from doab.parsing.common import SubprocessMixin, CleanReferenceMixin
 
 logger = logging.getLogger(__name__)
 
 
-class BaseReferenceParser(object):
+class BaseReferenceParser(CleanReferenceMixin):
     """ A base class for implementing reference parsers
 
     ChildrenMustImplement
@@ -30,31 +28,8 @@ class BaseReferenceParser(object):
     def parse_reference(cls, reference):
         return None
 
-    @staticmethod
-    def clean(reference):
-        logger.debug(f"Cleaning {reference}")
-        without_newlines = reference.replace("\u200b", "").replace("\n", " ")
-        without_redundant_space = " ".join(without_newlines.split())
-        logger.debug(f"Cleaned to: {without_redundant_space}")
-        return without_redundant_space
 
-class SubprocessParserMixin(BaseReferenceParser):
-    """ Mixin for calling an external routine in a subprocess"""
-    CMD = ""
-
-    @classmethod
-    def check_cmd(cls):
-        if not shutil.which(cls.CMD):
-            raise EnvironmentError(f"command `{cls.CMD}` not in path")
-
-    @classmethod
-    def call_cmd(cls, *args):
-        cls.check_cmd()
-        stdout = subprocess.check_output([cls.CMD, *args])
-        return stdout.decode("utf-8")
-
-
-class CermineParser(SubprocessParserMixin):
+class CermineParser(BaseReferenceParser, SubprocessMixin):
     accuracy = 50
     NAME = const.CERMINE
     CMD = "cermine"
@@ -67,7 +42,7 @@ class CermineParser(SubprocessParserMixin):
     def parse_reference(cls, reference, bibtex_parser=None):
         if bibtex_parser is None:
             bibtex_parser = BibTexParser()
-        bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference,)))
+        bibtex_reference = cls.call_cmd(reference)
         logger.debug(f"Bibtex {bibtex_reference}")
 
         result = None
@@ -82,7 +57,7 @@ class CermineParser(SubprocessParserMixin):
 
         # append a full stop if there is no title returned and re-run
         if not result or not 'title' in result or not result["title"]:
-            bibtex_reference = cls.call_cmd(*chain(cls.ARGS, (reference + '.',)))
+            bibtex_reference = cls.call_cmd(reference + '.')
 
             try:
                 result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
@@ -128,12 +103,21 @@ class CrossrefParser(HTTPBasedParserMixin):
 
                 ret['author'] = ''
                 if 'author' in doi:
-                    ret['author'] = ', '.join([f'{author["given"]} {author["family"]}' for author in doi['author']])
+                    ret['author'] = ', '.join(
+                        [
+                            f'{author.get("given", "")} {author.get("family", "")}'
+                            for author in doi['author']
+                        ]
+                    )
 
-                if 'title' in doi:
+                if 'title' in doi and doi["title"]:
                     ret['title'] = doi['title'][0]
+                else:
+                    logger.warning(f"No Title available for {crossref_match} ")
+                    return None
 
-                if 'container-title' in doi and len(doi['container-title']) > 0:
+
+                if 'container-title' in doi and doi['container-title']:
                     ret['journal'] = doi['container-title'][0]
 
                 if 'volume' in doi:

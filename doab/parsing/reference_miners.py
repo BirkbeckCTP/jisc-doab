@@ -11,6 +11,7 @@ from doab.db import models
 from .reference_finders import (
     BloomsburyReferenceFinder,
     CambridgeReferenceFinder,
+    PDFDOIFinder,
     SpringerEPUBReferenceFinder,
 )
 
@@ -166,6 +167,13 @@ class CambridgeCoreMiner(ReferenceMiner):
     FILE_TYPES = ['CambridgeCore']
 
 
+class PDFMiner(ReferenceMiner):
+    REFERENCE_PARSERS = (CrossrefParser,)
+    REFERENCE_FINDERS = (PDFDOIFinder,)
+    FILE_TYPES = ["pdf"]
+    PUBLISHER_NAMES = ["all"]
+
+
 class BloomsburyAcademicMiner(ReferenceMiner):
     PUBLISHER_NAMES = ['{"Bloomsbury Academic"}']
     REFERENCE_PARSERS = [
@@ -173,7 +181,6 @@ class BloomsburyAcademicMiner(ReferenceMiner):
         CrossrefParser,
     ]
     REFERENCE_FINDERS = [BloomsburyReferenceFinder]
-    PUBLISHER_NAMES = ['{"Cambridge University Press"}']
     FILE_TYPES = ['all']
 
 
@@ -195,4 +202,5 @@ MINERS = [
     SpringerMiner,
     CambridgeCoreMiner,
     BloomsburyAcademicMiner,
+    PDFMiner,
 ]

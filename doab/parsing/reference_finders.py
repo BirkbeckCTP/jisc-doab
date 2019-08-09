@@ -8,10 +8,12 @@ from bs4 import BeautifulSoup
 
 from doab import const
 from doab.files import EPUBFileManager, FileManager
+from doab.parsing.common import CleanReferenceMixin, SubprocessMixin
 
 logger = logging.getLogger(__name__)
 
-class BaseReferenceFinder(object):
+
+class BaseReferenceFinder(CleanReferenceMixin):
     def __init__(self, book_id, book_path, *args, **kwargs):
         self.book_id = book_id
         self.book_path = book_path
@@ -31,6 +33,18 @@ class BaseReferenceFinder(object):
         logger.debug(f"Cleaned to: {without_redundant_space}")
         return without_redundant_space
 
+
+class PDFDOIFinder(BaseReferenceFinder, SubprocessMixin):
+    CMD = "pdftotext" #TODO: Windows alternative?
+    def __init__(self, book_id, book_path, *args, **kwargs):
+        super().__init__(book_id, book_path, *args, **kwargs)
+        self.file_manager = FileManager(os.path.join(book_path, const.RECOGNIZED_BOOK_TYPES['pdf']))
+
+    def find(self):
+        references = set()
+        pdf_path = os.path.join(self.book_path, const.RECOGNIZED_BOOK_TYPES["pdf"])
+        text = self.call_cmd(pdf_path, "-")
+        return {doi for doi in const.DOI_RE.findall(text)}
 
 class EPUBReferenceFinder(BaseReferenceFinder):
     HTML_FILTER = (None, None)
