@@ -18,7 +18,7 @@ from sqlalchemy.orm import relationship
 
 from doab import const
 from doab.files import EPUBFileManager
-from doab.reference_parsers import yield_parsers, get_parser_by_name
+from doab.parsing import yield_miners, get_parser_by_name
 
 Base = declarative_base()
 
@@ -67,7 +67,7 @@ class Book(Base):
     intersection = relationship("Intersection", backref="book", uselist=False)
 
     def parsers(self, input_path=const.DEFAULT_OUT_DIR):
-        return yield_parsers(self, input_path)
+        return yield_miners(self, input_path)
 
     def citation(self, input_path=const.DEFAULT_OUT_DIR):
         output = ''
@@ -97,7 +97,7 @@ class Reference(Base):
         if len(self.parsed_references) > 0:
             # find the parser with the greatest accuracy
             prs = list(self.parsed_references)
-            prs.sort(reverse=True, key=lambda x: get_parser_by_name(x.parser, mixin_only=False).accuracy)
+            prs.sort(reverse=True, key=lambda x: get_parser_by_name(x.parser).accuracy)
 
             return str(prs[0])
         else:

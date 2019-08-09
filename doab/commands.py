@@ -13,7 +13,7 @@ from doab.client import DOABOAIClient
 from doab.db import models, session_context, get_engine
 from doab.files import FileManager
 from doab.reference_matching import match
-from doab import reference_parsers
+from doab.parsing import get_parser_by_name, PARSERS
 from doab import tasker
 
 logger = logging.getLogger(__name__)
@@ -239,7 +239,7 @@ def parse_reference(book_id, input_path):
 
 
 def match_reference(reference=None, parser='Cermine'):
-    parser_class = reference_parsers.get_parser_by_name(parser)
+    parser_class = get_parser_by_name(parser)
 
     clean = parser_class.clean(reference)
     parsed_reference = parser_class.parse_reference(clean)
@@ -254,7 +254,7 @@ def match_reference(reference=None, parser='Cermine'):
 
 def print_parsers():
     print('Single citation parsers:')
-    for parser in reference_parsers.MIXIN_PARSERS:
+    for parser in PARSERS:
         print(parser.PARSER_NAME)
 
 
