@@ -172,7 +172,9 @@ class BloomsburyExtractor(HTTPCorpusExtractorMixin, BaseCorpusExtractor):
     IDENTIFIER = 'BloomsburyExtractor'
     PUBLISHER_NAME = 'Bloomsbury Academic'
     HTML_BASE_URL = 'https://www.bloomsburycollections.com'
-    DOI = ''
+    TITLE_TEMPL = '(\/book\/{book_title}/.+)'
+    CHAPTER_TEMPL = '/book/{book_title}/(.+)'
+    TITLE_RE = re.compile(r'\/book\/(.+?).ris')
 
     @staticmethod
     def validate_identifier(identifier, doab_record):
@@ -182,26 +184,22 @@ class BloomsburyExtractor(HTTPCorpusExtractorMixin, BaseCorpusExtractor):
         from doab.client import is_uri
         identifiers = filter(is_uri, self.record.metadata['identifier'])
 
-        first_run = True
-
         for identifier in identifiers:
             try:
                 base = self._fetch(identifier)
                 soup = BeautifulSoup(base, "html.parser")
-                new_regex = '(\/book\/BOOK_TITLE_HERE/.+)'
-                chapter_title_regex = '/book/BOOK_TITLE_HERE/(.+)'
-                title_regex = re.compile(r'\/book\/(.+?).ris')
+                book_link = soup.find(name='a', attrs={'href':self.TITLE_RE})
+                if not book_link:
+                    logger.debug(f"Title slug not found in {identifier}")
+                    continue
+                title = self.TITLE_RE.search(book_link['href']).group(1)
+                logger.debug(f"Found title slug {title}")
+                search_re = self.TITLE_TEMPL.format(book_title=title)
+                chapter_title_re = self.CHAPTER_TEMPL.format(book_title=title)
 
-                for ref in soup.find_all(name='a', attrs={'href': lambda x : x.startswith('/book/') if x else None}):
-                    if first_run:
-                        title = title_regex.search(ref['href']).group(1)
-                        new_regex = new_regex.replace('BOOK_TITLE_HERE', title)
-                        chapter_title_regex = chapter_title_regex.replace('BOOK_TITLE_HERE', title)
-                        first_run = False
-
-                for ref in soup.find_all(name='a', href=re.compile(new_regex)):
+                for ref in soup.find_all(name='a', href=re.compile(search_re)):
                     if ref and 'href' in ref.attrs and '{page_no}' not in ref['href']:
-                        yield (f'{re.search(chapter_title_regex, ref["href"]).group(1)}.html',
+                        yield (f'{re.search(chapter_title_re, ref["href"]).group(1)}.html',
                                self._fetch(f'{self.HTML_BASE_URL}{ref["href"]}'))
 
             except requests.exceptions.HTTPError as e:
@@ -318,7 +316,7 @@ class UPExtractor(BaseCorpusExtractor):
 CORPUS_EXTRACTORS = [
     #DebugCorpusExtractor,
     JSONMetadataExtractor,
-    PDFCorpusExtractor,
+    #PDFCorpusExtractor,
     EPUBCorpusExtractor,
     SpringerCorpusExtractor,
     CambridgeUniversityPressExtractor,
