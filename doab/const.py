@@ -27,6 +27,7 @@ RECOGNIZED_BOOK_TYPES = {
     'epub': 'book.epub',
     'pdf': 'book.pdf',
     'CambridgeCore': 'cc.html',
+    'txt': 'citations.txt', # A file with all the extracted citations
 }
 
 
