@@ -69,6 +69,17 @@ class EPUBReferenceFinder(BaseReferenceFinder):
         }
 
 
+class CitationTXTReferenceFinder(BaseReferenceFinder):
+
+    def __init__(self, book_id, book_path, *args, **kwargs):
+        super().__init__(book_id, book_path, *args, **kwargs)
+        self.file_manager = FileManager(os.path.join(
+            book_path, const.RECOGNIZED_BOOK_TYPES['txt']))
+
+    def find(self):
+       return {ref for ref in self.file_manager.readlines()}
+
+
 class SpringerEPUBReferenceFinder(EPUBReferenceFinder):
     HTML_FILTER = ("div", {"class": "CitationContent"})
 

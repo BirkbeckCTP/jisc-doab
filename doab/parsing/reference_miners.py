@@ -13,6 +13,7 @@ from .reference_finders import (
     CambridgeReferenceFinder,
     PDFDOIFinder,
     SpringerEPUBReferenceFinder,
+    CitationTXTReferenceFinder,
 )
 
 from .reference_parsers import (
@@ -124,11 +125,10 @@ class ReferenceMiner(object):
 
     @classmethod
     def can_handle(cls, book, input_path):
-        if 'all' in cls.PUBLISHER_NAMES:
-            print(f'The {cls} parser will handle {book.doab_id}')
-            return True
-
-        if book.publisher in cls.PUBLISHER_NAMES:
+        if (
+            'all' in cls.PUBLISHER_NAMES
+            or book.publisher in cls.PUBLISHER_NAMES
+        ):
             filetypes = FileManager(os.path.join(input_path, book.doab_id)).types
 
             for filetype in cls.FILE_TYPES:
@@ -140,8 +140,7 @@ class ReferenceMiner(object):
 
             logger.debug(f'{cls} parser can handle {book.doab_id}')
             return True
-        else:
-            return False
+        return False
 
 
 class PalgraveMiner(ReferenceMiner):
@@ -184,17 +183,26 @@ class BloomsburyAcademicMiner(ReferenceMiner):
     FILE_TYPES = ['all']
 
 
+class CitationTXTReferenceFinder(ReferenceMiner):
+    PUBLISHER_NAMES = "all"
+    REFERENCE_PARSERS = [CermineParser, CrossrefParser]
+    REFERENCE_FINDERS = [CitationTXTReferenceFinder]
+    FILE_TYPES = ["txt"]
+
+
 PARSERS = [
     CermineParser,
     CrossrefParser,
     BloomsburyAcademicParser,
     CambridgeCoreParser,
+    CitationTXTReferenceFinder,
 ]
 
 FINDERS = [
     BloomsburyReferenceFinder,
     CambridgeReferenceFinder,
     SpringerEPUBReferenceFinder,
+    CitationTXTReferenceFinder
 ]
 
 MINERS = [
@@ -203,4 +211,5 @@ MINERS = [
     CambridgeCoreMiner,
     BloomsburyAcademicMiner,
     PDFMiner,
+    CitationTXTReferenceFinder,
 ]
