@@ -32,11 +32,12 @@ RECOGNIZED_BOOK_TYPES = {
 
 
 #Parser Names:
+ANYSTYLE = "Anystyle"
+BLOOMSBURY_ACADEMIC = "Bloomsbury Academic"
+CAMBRIDGE_CORE = "Cambridge Core"
 CERMINE = "Cermine"
 CROSSREF = "Crossref"
 PALGRAVE_EPUB = "Palgrave Epub"
-CAMBRIDGE_CORE = "Cambridge Core"
-BLOOMSBURY_ACADEMIC = "Bloomsbury Academic"
 
 
 class Publisher(Enum):

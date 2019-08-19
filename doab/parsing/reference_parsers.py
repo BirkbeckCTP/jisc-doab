@@ -72,6 +72,38 @@ class CermineParser(BaseReferenceParser, SubprocessMixin):
         return result
 
 
+class AnystyleParser(BaseReferenceParser, SubprocessMixin):
+    accuracy = 60 # Works better than Cermine for non-english references
+    NAME = const.ANYSTYLE
+    CMD = "anystyle"
+    ARGS = ["-f" "json"]
+
+    @classmethod
+    def parse_reference(cls, reference, bibtex_parser=None):
+        parsed_reference = cls.call_cmd(reference)
+        logger.debug(f"Anystyle result {parsed_reference}")
+
+        result = cls.handle_command_result(parsed_reference)
+
+        fail_message = f'{cls.NAME} was unable to pull a title from {reference}'
+
+        # append a full stop if there is no title returned and re-run
+        if not result or not 'title' in result or not result["title"]:
+                logger.debug(fail_message)
+                return None
+
+        return result
+
+    @staticmethod
+    def parse_anystyle_reference(reference):
+        """ Parses the result of a call to Anystyle
+        :param str reference: The string captured from calling Anystyle
+        :return dict: A dict with all the elements parsed from the reference
+        """
+        parsed = json.loads(reference)
+        import pdb;pdb.set_trace()
+
+
 class HTTPBasedParserMixin(BaseReferenceParser):
     """ Mixin for requesting references to be parsed by an HTTP service"""
     REQ_METHOD = ""
