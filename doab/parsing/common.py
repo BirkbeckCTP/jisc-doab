@@ -19,7 +19,7 @@ class SubprocessMixin(object):
     @classmethod
     def call_cmd(cls, *args):
         cls.check_cmd()
-        logger.debug(f"Spawning process to run {cls.CMD}")
+        logger.debug(f"Spawning process to run {cls.CMD} with args: {args}")
         stdout = subprocess.check_output([cls.CMD, *chain(cls.ARGS, args)])
         return stdout.decode("utf-8")
 

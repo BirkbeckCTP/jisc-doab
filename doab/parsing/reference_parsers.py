@@ -13,6 +13,18 @@ from doab.parsing.common import SubprocessMixin, CleanReferenceMixin
 logger = logging.getLogger(__name__)
 
 
+def parse_bibtex(reference, bibtex_parser=None):
+    if bibtex_parser is None:
+        bibtex_parser = BibTexParser()
+    try:
+        result = bibtex_parser.parse(reference).get_entry_list()[-1]
+    except IndexError:
+        #unable to parse
+        result = None
+
+    return result
+
+
 class BaseReferenceParser(CleanReferenceMixin):
     """ A base class for implementing reference parsers
 
@@ -40,34 +52,43 @@ class CermineParser(BaseReferenceParser, SubprocessMixin):
 
     @classmethod
     def parse_reference(cls, reference, bibtex_parser=None):
-        if bibtex_parser is None:
-            bibtex_parser = BibTexParser()
         bibtex_reference = cls.call_cmd(reference)
         logger.debug(f"Bibtex {bibtex_reference}")
-
-        result = None
-
-        try:
-            result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
-        except IndexError:
-            # unable to parse
-            pass
-
+        result = parse_bibtex(bibtex_reference, bibtex_parser)
         fail_message = f'{cls.NAME} was unable to pull a title from {reference}'
 
         # append a full stop if there is no title returned and re-run
         if not result or not 'title' in result or not result["title"]:
-            bibtex_reference = cls.call_cmd(reference + '.')
-
-            try:
-                result = bibtex_parser.parse(bibtex_reference).get_entry_list()[-1]
-            except IndexError:
+            # Cermine struggles with references missing trailling fullstop
+            if not reference.endswith("."):
+                retry = reference + '.'
+                return cls.parse_reference(retry)
+            else:
                 logger.debug(fail_message)
-                return None
+                result = None
 
-            if not 'title' in result:
-                logger.debug(fail_message)
-                return None
+
+        return result
+
+
+class AnystyleParser(BaseReferenceParser, SubprocessMixin):
+    accuracy = 60 # Works better than Cermine for non-english references
+    NAME = const.ANYSTYLE
+    CMD = "anystyle"
+    ARGS = ["-f", "bib", "parse_reference"]
+
+    @classmethod
+    def parse_reference(cls, reference, bibtex_parser=None):
+        if reference.startswith("-"):
+            reference = f'"{reference}"'
+        bibtex_reference = cls.call_cmd(reference)
+        logger.debug(f"Bibtex {bibtex_reference}")
+        result = parse_bibtex(bibtex_reference)
+        fail_message = f'{cls.NAME} was unable to pull a title from {reference}'
+
+        if not result or not 'title' in result or not result["title"]:
+            logger.debug(fail_message)
+            return None
 
         return result
 

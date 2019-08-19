@@ -3,6 +3,7 @@ import logging
 import os
 from os.path import isfile
 import re
+from unidecode import unidecode
 
 from bs4 import BeautifulSoup
 
@@ -14,6 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class BaseReferenceFinder(CleanReferenceMixin):
+    TO_CLEAN = str.maketrans({
+        char: None
+        for char in {
+            "«", "»", "\u200b",
+
+        }
+    })
     def __init__(self, book_id, book_path, *args, **kwargs):
         self.book_id = book_id
         self.book_path = book_path
@@ -25,13 +33,15 @@ class BaseReferenceFinder(CleanReferenceMixin):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def clean(reference):
+    @classmethod
+    def clean(cls, reference):
         logger.debug(f"Cleaning {reference}")
-        without_newlines = reference.replace("\u200b", "").replace("\n", " ")
+        without_newlines = reference.replace("\n", " ")
         without_redundant_space = " ".join(without_newlines.split())
-        logger.debug(f"Cleaned to: {without_redundant_space}")
-        return without_redundant_space
+        purged = without_redundant_space.translate(cls.TO_CLEAN)
+        transliterated = unidecode(purged)
+        logger.debug(f"Cleaned to: {transliterated}")
+        return transliterated
 
 
 class PDFDOIFinder(BaseReferenceFinder, SubprocessMixin):
@@ -67,6 +77,17 @@ class EPUBReferenceFinder(BaseReferenceFinder):
             self.clean(ref.text)
             for ref in soup.find_all(name=tag, attrs=attributes)
         }
+
+
+class CitationTXTReferenceFinder(BaseReferenceFinder):
+
+    def __init__(self, book_id, book_path, *args, **kwargs):
+        super().__init__(book_id, book_path, *args, **kwargs)
+        self.file_manager = FileManager(os.path.join(
+            book_path, const.RECOGNIZED_BOOK_TYPES['txt']))
+
+    def find(self):
+       return {self.clean(ref) for ref in self.file_manager.readlines()}
 
 
 class SpringerEPUBReferenceFinder(EPUBReferenceFinder):

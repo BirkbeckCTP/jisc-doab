@@ -19,6 +19,7 @@ Usage:
 
 Options:
   -d --debug    Enable debug mode
+  -y --yes      Answer with "y" any confirmation requests
 
 """
 import sys
@@ -42,10 +43,14 @@ from doab.commands import (
     print_publishers,
 )
 
+CONFIRM = True
 
 def run():
     args = docopt(__doc__, version='Jisc Open Monographs Metrics Experiment 1.0')
     init_logging(args['--debug'])
+    if args["--yes"]:
+        global CONFIRM
+        CONFIRM = False
 
     # normalize arguments
     if not args['--output_path']:
@@ -95,7 +100,7 @@ def run():
 
 def publisher_validator(arg):
     """ Ensures that the publisher id argument is either an int or 'all' """
-    if arg == "all":
+    if arg == "all" and CONFIRM:
         response = ""
         while response.lower() not in {"y", "n"}:
             response = input(

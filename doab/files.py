@@ -40,6 +40,12 @@ class FileManager():
         with open(read_path, f"r{mode}") as read_file:
             return read_file.read()
 
+    def readlines(self, *path_parts, mode=""):
+        read_path = os.path.join(self.base_path, *path_parts)
+        with open(read_path, f"r{mode}") as read_file:
+            return read_file.readlines()
+
+
     def unzip(self, *path_parts, out=None):
         """Extracts the contents into memory or to a file
         :param *path_parts: aany number of parts to be joined for the path
