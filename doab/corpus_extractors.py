@@ -154,6 +154,7 @@ class EPUBCorpusExtractor(MimeBasedCorpusExtractor):
 
 class DebugCorpusExtractor(BaseCorpusExtractor):
     IDENTIFIER = 'DebugCorpusExtractor'
+
     @staticmethod
     def validate_identifier(identifier, metadata):
         session = requests.session()
@@ -437,15 +438,27 @@ class UPExtractor(BaseCorpusExtractor):
     def validate_identifier(identifier, doab_record):
         return False
 
+
+class OpenEditionsProber(DebugCorpusExtractor):
+    IDENTIFIER = 'OpenEditionsProber'
+
+    @classmethod
+    def validate_identifier(cls, identifier, metadata):
+        if "openedition.org" in identifier:
+            super().validate_identifier(identifier, metadata)
+        return False
+
+
 CORPUS_EXTRACTORS = [
-    DebugCorpusExtractor,
+    #DebugCorpusExtractor,
+    #OpenEditionsProber,
     OpenEditionsExtractor,
     JSONMetadataExtractor,
-    #PDFCorpusExtractor,
-    #EPUBCorpusExtractor,
-    #SpringerCorpusExtractor,
-    #CambridgeUniversityPressExtractor,
-    #BloomsburyExtractor,
+    PDFCorpusExtractor,
+    EPUBCorpusExtractor,
+    SpringerCorpusExtractor,
+    CambridgeUniversityPressExtractor,
+    BloomsburyExtractor,
     #UPExtractor,
 ]
 
