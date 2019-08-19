@@ -17,6 +17,7 @@ from .reference_finders import (
 )
 
 from .reference_parsers import (
+    AnystyleParser,
     CermineParser,
     CrossrefParser,
     BloomsburyAcademicParser,
@@ -185,12 +186,13 @@ class BloomsburyAcademicMiner(ReferenceMiner):
 
 class CitationTXTReferenceFinder(ReferenceMiner):
     PUBLISHER_NAMES = "all"
-    REFERENCE_PARSERS = [CermineParser, CrossrefParser]
+    REFERENCE_PARSERS = [AnystyleParser, CrossrefParser]
     REFERENCE_FINDERS = [CitationTXTReferenceFinder]
     FILE_TYPES = ["txt"]
 
 
 PARSERS = [
+    AnystyleParser,
     CermineParser,
     CrossrefParser,
     BloomsburyAcademicParser,
