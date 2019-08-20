@@ -233,9 +233,9 @@ def parse_reference(book_id, input_path, dry_run=False):
                         logger.debug("Running parser {0} for book {1}.".format(parser, book_id))
                         parser_for_book = parser(book_id, path)
                         if dry_run:
-                            parser_for_book.run(session)
-                        else:
                             parser_for_book.run()
+                        else:
+                            parser_for_book.run(session)
                 else:
                     logger.debug(f'No appropriate parser found for {book_id}.')
 
