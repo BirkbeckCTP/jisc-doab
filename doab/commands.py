@@ -89,9 +89,10 @@ def upsert_book(book_id, metadata):
             session.add(book)
 
         book.update_with_metadata(metadata)
-        for author_str in metadata["creator"]:
-            author = upsert_author(session, author_str)
-            book.authors.append(author)
+        if metadata["creator"]:
+            for author_str in metadata["creator"]:
+                author = upsert_author(session, author_str)
+                book.authors.append(author)
         for identifier_str in metadata["identifier"]:
             identifier = upsert_identifier(session, identifier_str)
             identifier.book = book
@@ -130,7 +131,11 @@ def process_author_str(author):
         last_name, names = transliterated.split(",")
     except ValueError:
         # Names Surname
-        names, last_name = transliterated.rsplit(" ", 1)
+        try:
+            names, last_name = transliterated.rsplit(" ", 1)
+        except ValueError:
+            logger.warning(f"Can't handle author name {author}")
+            return transliterated, "", "", transliterated, ""
     standarised_name = " ".join((names, last_name))
     first_name, *middle_names = names.split()
     middle_name = " ".join(middle_names)
