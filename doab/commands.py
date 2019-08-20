@@ -266,16 +266,37 @@ def print_parsers():
         print(parser.PARSER_NAME)
 
 
-def intersect(publisher_id=None, workers=0):
+def intersect(publisher_id=None, workers=0, dry_run=False, book_ids=None):
     with session_context() as session:
-        ref_ids = session.query(
-            models.Reference.id
-        ).filter(
-            models.Reference.matched_id == None
-        ).all()
+        refs = session.query(
+            models.Reference
+        )
+        if book_ids:
+            dry_run = True #If a list of books is given, assume dry run
+            book_ids = set(book_ids)
+            refs = refs.filter(models.Reference.books.any(
+                models.Book.doab_id.in_(book_ids)
+            ))
+        if not dry_run:
+            # If persisting, skip previously matched references for performance
+            refs = refs.filter(
+                models.Reference.matched_id == None
+            )
+
+        ref_ids = [ref.id for ref in refs]
     msg = "Matching References"
     # Not thread safe yet
-    results = tasker.run(intersect_reference, ref_ids, msg, 0)
+    results = tasker.run(
+            intersect_reference, ref_ids, msg, 0, dry_run, book_ids
+    )
+    if dry_run:
+        print("RESULTS")
+        print("=======")
+        for result in results:
+            for reference, book_ids in result:
+                if len(book_ids) > 1:
+                    print(reference)
+                    print(f"Book IDs: {book_ids}")
 
 
 def nuke_intersections():
@@ -283,7 +304,7 @@ def nuke_intersections():
         session.query(models.Intersection).delete()
         session.commit()
 
-def intersect_reference(reference_id):
+def intersect_reference(reference_id, dry_run=None, book_ids=None):
     """Intersects all the parses of the reference with the entire DB
 
     First we fetch all the different parses for this reference, then we `match`
@@ -300,10 +321,11 @@ def intersect_reference(reference_id):
         ).filter(
             models.ParsedReference.reference_id == reference_id,
         )
+
         for parse in parses:
             logger.debug(f"Matching with {parse.parser} parser")
             references_matched |= set(
-                match(parse, session, return_references=True)
+                match(parse, session, return_references=True, book_ids=book_ids)
             )
 
         references = session.query(
@@ -314,19 +336,26 @@ def intersect_reference(reference_id):
             models.Reference.matched_id
         )
 
-        # If any of the references is in an intersection
-        # then all the new matches should be in the same one
-        first_match = references.first()
-        if not first_match:
-            return
+        if dry_run:
+            return tuple(
+                (reference.id, [book.doab_id for book in reference.books])
+                for reference in references
+                if len(reference.books) > 1
+            )
+        else:
+            # If any of the references is in an intersection
+            # then all the new matches should be in the same one
+            first_match = references.first()
+            if not first_match:
+                return
 
-        intersection = first_match.intersection
-        if not intersection:
-            intersection = models.Intersection()
-            session.add(intersection)
+            intersection = first_match.intersection
+            if not intersection:
+                intersection = models.Intersection()
+                session.add(intersection)
 
-        intersection.references.extend(references.all())
-        session.commit()
+            intersection.references.extend(references.all())
+            session.commit()
 
 
 def next_n(n, iterable):

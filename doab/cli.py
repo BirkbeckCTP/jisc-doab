@@ -11,7 +11,7 @@ Usage:
   cli.py list_parsers [options]
   cli.py nuke_citations [--book_id=BOOK_IDS...] [options]
   cli.py nuke_intersections [--book_id=BOOK_IDS...] [options]
-  cli.py intersect [options]
+  cli.py intersect [options] [-n --dry-run] [--book_id=BOOK_IDS...]
   cli.py list_intersections [options]
 
   cli.py (-h | --help)
@@ -98,7 +98,7 @@ def run():
     elif args['nuke_citations']:
         nuke_citations(args['--book_id'])
     elif args['intersect']:
-        intersect()
+        intersect(dry_run=args["--dry-run"], book_ids=args["--book_id"])
     elif args['list_intersections']:
         list_intersections()
 
