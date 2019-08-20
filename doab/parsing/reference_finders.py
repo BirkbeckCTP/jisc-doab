@@ -74,9 +74,14 @@ class EPUBReferenceFinder(BaseReferenceFinder):
     def process_soup(self, soup):
         tag, attributes = self.HTML_FILTER
         return {
-            self.clean(ref.text)
-            for ref in soup.find_all(name=tag, attrs=attributes)
+            self.clean_html(html_ref)
+            for html_ref in soup.find_all(name=tag, attrs=attributes)
         }
+
+    @classmethod
+    def clean_html(cls, html_ref):
+        text_ref = html_ref.text
+        return cls.clean(text_ref)
 
 
 class CitationTXTReferenceFinder(BaseReferenceFinder):
@@ -92,6 +97,17 @@ class CitationTXTReferenceFinder(BaseReferenceFinder):
 
 class SpringerEPUBReferenceFinder(EPUBReferenceFinder):
     HTML_FILTER = ("div", {"class": "CitationContent"})
+
+    @classmethod
+    def clean_html(cls, html_ref):
+        """ Avoids DOI being swallowed by parent behaviour
+
+        DOIs are `a` tags with the text 'CrossRef', the DOI is in the `href`
+        """
+        doi_tag = html_ref.find(name="a", text=lambda x: "CrossRef" in x)
+        if doi_tag and doi_tag["href"]:
+            doi_tag.string =f' {doi_tag["href"]}'
+        return super().clean_html(html_ref)
 
 
 class BloomsburyReferenceFinder(BaseReferenceFinder):
