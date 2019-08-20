@@ -203,14 +203,14 @@ def print_citations(book_ids=None):
             except NoResultFound:
                 logger.error(f'Error retrieving book {book_id}.')
 
-def parse_references(input_path, book_ids=None, workers=0):
+def parse_references(input_path, book_ids=None, workers=0, dry_run=False):
     if not book_ids:
         book_ids = list_extracted_books(input_path)
     msg = "Parsing book"
-    tasker.run(parse_reference, book_ids, msg, workers, input_path)
+    tasker.run(parse_reference, book_ids, msg, workers, input_path, dry_run)
 
 
-def parse_reference(book_id, input_path):
+def parse_reference(book_id, input_path, dry_run=False):
     path = os.path.join(input_path, str(book_id))
 
     with session_context() as session:
@@ -227,7 +227,10 @@ def parse_reference(book_id, input_path):
                     for parser in parsers:
                         logger.debug("Running parser {0} for book {1}.".format(parser, book_id))
                         parser_for_book = parser(book_id, path)
-                        parser_for_book.run(session)
+                        if dry_run:
+                            parser_for_book.run(session)
+                        else:
+                            parser_for_book.run()
                 else:
                     logger.debug(f'No appropriate parser found for {book_id}.')
 
