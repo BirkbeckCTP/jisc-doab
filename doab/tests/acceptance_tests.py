@@ -21,3 +21,21 @@ class PalgraveAcceptanceTestB(AcceptanceTest):
 class PalgraveAcceptanceTestC(AcceptanceTest):
     CITATION = "Norton, D., & Marks-Maran, D. (2014). Developing cultural sensitivity and awareness in nursing overseas. Nursing Standard, 28(44), 39–43.CrossRef"
     BOOK_IDS = {"21610", "21612"}
+
+
+@TestManager.register
+class class OpenEditionsTestA(AcceptanceTest):
+    CITATION = "Durand Gilbert, Les Structures anthropologiques de l'imaginaire, Paris, Bordas, 1969."
+    BOOK_IDS = {"16988", "19329", "20818", "20855", "20862", "20941", "21060", "21251", "22074", "22229", "22264"}
+
+
+@TestManager.register
+class OpenEditionsTestB(AcceptanceTest):
+    CITATION = "Foucault M. (1975), Surveiller et punir, Paris, Gallimard."
+    BOOK_IDS = {"9337", "20851", "21101", "21176", "21251"}
+
+
+@TestManager.register
+class OpenEditionsTestC(AcceptanceTest):
+    CITATION = "Brynen Rex 1995,  The Neopatrimonial Dimension of Palestinian Politics , Journal of Palestine Studies 1, p. 23-36."
+    BOOK_IDS = {"15809", "15815", "16571", "16583", "16604"}

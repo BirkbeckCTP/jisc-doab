@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 @singledispatch
-def match(reference, session, return_references=False):
+def match(reference, session, return_references=False, book_ids=None):
     matches = []
     for matcher in MATCHERS:
-        matched = matcher(reference, session)
+        matched = matcher(reference, session, book_ids)
         if return_references:
             matches += matched.keys()
         else:
@@ -32,7 +32,7 @@ def match_parsed_reference(reference, *args, **kwargs):
     return match(d, *args, **kwargs)
 
 
-def match_by_doi(reference, session):
+def match_by_doi(reference, session, book_ids=None):
     if "doi" not in reference or reference["doi"] is None:
         return {}
 
@@ -41,11 +41,16 @@ def match_by_doi(reference, session):
         ).filter(
             models.ParsedReference.doi == reference["doi"],
         )
+    if book_ids:
+        parses_matching = parses_matching.join(
+            models.Reference
+        ).filter(
+            models.Reference.books.any(models.Book.doab_id.in_(book_ids))
+        )
     return {p.reference_id: p.reference.books for p in parses_matching}
 
 
-
-def match_title_exact(reference, session):
+def match_title_exact(reference, session, book_ids=None):
     if "title" not in reference or reference["title"] is None:
         return {}
     parses_matching = session.query(
@@ -53,10 +58,16 @@ def match_title_exact(reference, session):
     ).filter(
         models.ParsedReference.title == reference["title"],
     )
+    if book_ids:
+        parses_matching = parses_matching.join(
+            models.Reference
+        ).filter(
+            models.Reference.books.any(models.Book.doab_id.in_(book_ids))
+        )
     return {p.reference_id: p.reference.books for p in parses_matching}
 
 
-def match_fuzzy(reference, session):
+def match_fuzzy(reference, session, book_ids=None):
     title = reference.get("title")
     authors = reference.get("author", "")
     if "title" not in reference or reference["title"] is None:
@@ -71,6 +82,12 @@ def match_fuzzy(reference, session):
     ).filter(
         models.ParsedReference.title.op("%%")(title),
     )
+    if book_ids:
+        parses_matching = parses_matching.join(
+            models.Reference
+        ).filter(
+            models.Reference.books.any(models.Book.doab_id.in_(book_ids))
+        )
 
     #refine with autors
     matches = []
