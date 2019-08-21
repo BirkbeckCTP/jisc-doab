@@ -383,7 +383,8 @@ class ListIntersections():
         count(pr.reference_id) AS total_refs,
         string_agg(r.id, '|') AS ref_ids,
         count(distinct b.book_id) total_books,
-        string_agg(distinct b.book_id, '|') AS book_ids
+        string_agg(distinct b.book_id, '|') AS book_ids,
+        r.matched_id as intersection_id
     FROM public.reference r
     JOIN public.parsed_reference pr on pr.reference_id = r.id
     JOIN public.book_reference b ON b.reference_id = r.id
@@ -409,13 +410,15 @@ def list_intersections():
         intersection_chunks = ListIntersections(session)
         idx = 0
         for chunk in intersection_chunks:
-            for ref_count, ref_ids, book_count, book_ids in chunk:
-                idx += 1
-                ref_ids_list = ref_ids.split("|")
-                print(f"{idx}. {book_count} books across {ref_count} "
-                      f"matched references. book ids: {book_ids} ")
-                refs = session.query(
-                        models.Reference
-                    ).filter(models.Reference.id.in_(ref_ids_list))
-                for ref in refs:
-                    logger.debug(f"{ref}")
+            for ref_count, ref_ids, book_count, book_ids, id in chunk:
+                if book_count > 1:
+                    idx += 1
+                    ref_ids_list = ref_ids.split("|")
+                    print(f"{idx}. {book_count} books across {ref_count} "
+                          f"matched references. book ids: {book_ids} ")
+                    print(ref_ids_list[0], id)
+                    refs = session.query(
+                            models.Reference
+                        ).filter(models.Reference.id.in_(ref_ids_list))
+                    for ref in refs:
+                        logger.debug(f"{ref}")
