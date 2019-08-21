@@ -328,7 +328,7 @@ class OpenEditionsExtractor(HTTPCorpusExtractorMixin):
             data = "\n".join(citations).encode("utf-8")
             yield(const.RECOGNIZED_BOOK_TYPES['txt'], data)
         else:
-            logger.warning("{self} extracted no citations")
+            logger.warning(f"{self} extracted no citations")
             return []
 
 
