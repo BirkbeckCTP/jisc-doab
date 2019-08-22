@@ -246,6 +246,23 @@ def parse_reference(book_id, input_path, dry_run=False):
             logger.debug(f"No book.epub available: {e}")
 
 
+def list_references(book_id):
+    with session_context() as session:
+        try:
+            session.query(
+                models.Book
+            ).filter(models.Book.doab_id == str(book_id)).one()
+        except NoResultFound:
+            logger.error(f'Error retrieving book {book_id}.')
+
+        references = session.query(
+            models.Reference.id
+        ).filter(models.Reference.books.any(
+                models.Book.doab_id==str(book_id)
+            ))
+        return [ref_id for ref_id in references]
+
+
 def match_reference(reference=None, parser='Cermine'):
     parser_class = get_parser_by_name(parser)
 

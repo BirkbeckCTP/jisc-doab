@@ -13,6 +13,7 @@ Usage:
   cli.py nuke_intersections [--book_id=BOOK_IDS...] [options]
   cli.py intersect [options] [-n --dry-run] [--book_id=BOOK_IDS...]
   cli.py list_intersections [options]
+  cli.py list_references <book_id> [options]
 
   cli.py (-h | --help)
   cli.py --version
@@ -27,12 +28,14 @@ import sys
 from doab import const
 from docopt import docopt
 from doab.config import init_logging
+from pprint import pprint
 
 from doab.commands import (
     db_populator,
     extractor,
     intersect,
     list_intersections,
+    list_references,
     match_reference,
     nuke_citations,
     nuke_intersections,
@@ -101,6 +104,8 @@ def run():
         intersect(dry_run=args["--dry-run"], book_ids=args["--book_id"])
     elif args['list_intersections']:
         list_intersections()
+    elif args["list_references"]:
+        pprint(list_references(args["<book_id>"]))
 
 
 def publisher_validator(arg):
