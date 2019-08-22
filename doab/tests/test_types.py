@@ -1,6 +1,7 @@
 import sys
+from tempfile import TemporaryFile
 
-from doab.commands import db_populator, parse_references, match_reference
+from doab.commands import db_populator, parse_references, match_reference, list_references
 from doab.const import DEFAULT_OUT_DIR
 
 
@@ -10,6 +11,7 @@ class TestManager(object):
     @classmethod
     def register(cls, test_case):
         cls.TEST_CASES.append(test_case)
+        return cls
 
     @classmethod
     def test(cls):
@@ -21,7 +23,7 @@ class TestManager(object):
         raise NotImplementedError
 
 
-class AcceptanceTest(object):
+class IntersectAcceptanceTest(object):
     """ A Base class for running acceptance tests
 
     Children must declare a CITATION, BOOK_IDS and INPUT_PATH in order
@@ -57,3 +59,25 @@ class AcceptanceTest(object):
 
     def run(self):
         self.assert_references_matched()
+
+
+class ReferenceParsingTest(object):
+    PUBLISHER_NAME = ""
+    BOOK_REFERENCE_COUNTS = set()
+    MINER = None
+    INPUT_PATH = DEFAULT_OUT_DIR
+
+    def __init__(self, *args, **kwargs):
+        print(f"Starting Parse test for {self.PUBLISHER_NAME}")
+        print("Processing...")
+        book_ids = self.BOOK_REFERENCE_COUNTS.keys()
+        db_populator(self.INPUT_PATH, book_ids)
+        parse_references(self.INPUT_PATH, book_ids)
+
+    def assert_references_parsed(self):
+        for book_id in self.BOOK_REFERENCE_COUNTS.keys():
+            print(book_id, len(list_references(book_id)))
+
+    def run(self):
+        self.assert_references_parsed()
+
