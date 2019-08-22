@@ -224,7 +224,11 @@ class CambridgeCoreParser(BaseReferenceParser):
     NAME = const.CAMBRIDGE_CORE
 
     def parse_reference(cls, reference):
-        reference_json = json.loads(reference)
+        try:
+            reference_json = json.loads(reference)
+        except json.decoder.JSONDecodeError:
+            logger.warning(f"Not valid JSON reference: {reference}")
+            return None
 
         formatted_reference = {}
 

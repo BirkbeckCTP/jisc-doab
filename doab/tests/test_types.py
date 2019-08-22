@@ -75,8 +75,10 @@ class ReferenceParsingTest(object):
         parse_references(self.INPUT_PATH, book_ids)
 
     def assert_references_parsed(self):
-        for book_id in self.BOOK_REFERENCE_COUNTS.keys():
-            print(book_id, len(list_references(book_id)))
+        print("BOOK   EXP  MINED")
+        print("=================")
+        for book_id, expected in self.BOOK_REFERENCE_COUNTS.items():
+            print(book_id, expected, len(list_references(book_id)))
 
     def run(self):
         self.assert_references_parsed()

@@ -184,7 +184,7 @@ class BloomsburyAcademicMiner(ReferenceMiner):
     FILE_TYPES = ['all']
 
 
-class CitationTXTReferenceFinder(ReferenceMiner):
+class CitationTXTReferenceMiner(ReferenceMiner):
     PUBLISHER_NAMES = "all"
     REFERENCE_PARSERS = [AnystyleParser, CrossrefParser]
     REFERENCE_FINDERS = [CitationTXTReferenceFinder]
@@ -213,5 +213,5 @@ MINERS = [
     CambridgeCoreMiner,
     BloomsburyAcademicMiner,
     PDFMiner,
-    CitationTXTReferenceFinder,
+    CitationTXTReferenceMiner,
 ]

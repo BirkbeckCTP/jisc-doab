@@ -47,6 +47,7 @@ class OpenEditionsTestC(IntersectAcceptanceTest):
     BOOK_IDS = {"15809", "15815", "16571", "16583", "16604"}
 
 
+@TestManager.register
 class CEDEJParsingTest(ReferenceParsingTest):
     PUBLISHER_NAME = "CEDEJ"
     BOOK_REFERENCE_COUNTS = {
@@ -59,6 +60,7 @@ class CEDEJParsingTest(ReferenceParsingTest):
     MINER = CitationTXTReferenceMiner
 
 
+@TestManager.register
 class PalgraveParsingTest(ReferenceParsingTest):
     PUBLISHER_NAME = "Palgrave Macmillan"
     BOOK_REFERENCE_COUNTS = {
@@ -71,6 +73,7 @@ class PalgraveParsingTest(ReferenceParsingTest):
     MINER = SpringerMiner
 
 
+@TestManager.register
 class BloomsburyParsingTest(ReferenceParsingTest):
     PUBLISHER_NAME = "Bloomsbury Academic"
     BOOK_REFERENCE_COUNTS = {
@@ -83,6 +86,7 @@ class BloomsburyParsingTest(ReferenceParsingTest):
     MINER = BloomsburyAcademicMiner
 
 
+@TestManager.register
 class CasaVelazquezParsingTest(ReferenceParsingTest):
     PUBLISHER_NAME = "Casa de Velazquez"
     BOOK_REFERENCE_COUNTS = {
@@ -95,13 +99,14 @@ class CasaVelazquezParsingTest(ReferenceParsingTest):
     MINER = CitationTXTReferenceMiner
 
 
+@TestManager.register
 class CambridgeCoreParsingTest(ReferenceParsingTest):
     PUBLISHER_NAME = "Cambridge University Press"
     BOOK_REFERENCE_COUNTS = {
-        "15986": 0,
-        "15989": 0,
-        "16001": 0,
-        "16498": 0,
-        "21821": 0,
+        "15986": 773,
+        "15989": 338,
+        "16001": 477,
+        "16498": 387,
+        "21821": 388,
     }
     MINER = CambridgeCoreParser
