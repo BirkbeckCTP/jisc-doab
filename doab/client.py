@@ -52,7 +52,7 @@ class DOABRecord():
         self.doab_id = record.header.identifier.split(":")[-1]
         self.identifiers = filter(is_uri, record.metadata["identifier"])
         extractors = [
-            extractor.from_identifier(self, identifier)
+            extractor.from_identifier(self, identifier, self.metadata)
             for identifier in self.identifiers
             for extractor in CORPUS_EXTRACTORS
         ]
@@ -61,6 +61,24 @@ class DOABRecord():
             for extractor in extractors
             if extractor is not None
         ]
+
+        # some extractors do not want to be called more than once with different identifiers
+        # the allow_multiple variable allows them to register this and the below removes
+        # multiple instances
+        del_list = []
+        del_names = []
+
+        # build the list of entries to remove
+        for extractor in self.extractors:
+            if not extractor.allow_multiple and extractor not in del_list:
+                del_list.append(extractor)
+
+        # leave the first entry and remove all others
+        for obj in del_list:
+            if obj.IDENTIFIER in del_names:
+                self.extractors.remove(obj)
+            else:
+                del_names.append(obj.IDENTIFIER)
 
     def __str__(self):
         return f"<{self.__class__.__name__}:{self.doab_id}>"
@@ -74,7 +92,7 @@ class DOABRecord():
                     filename=label,
                     to_write=data,
                 )
-            labels.append(label)
+                labels.append(label)
         print(f"Extracted {len(labels)} items: {labels}")
 
 

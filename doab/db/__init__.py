@@ -18,11 +18,11 @@ def get_dsn():
         os.getenv("DOAB_DB_NAME", "doab"),
     )
 
-def start_engine(dsn):
+def start_engine(dsn=get_dsn(), echo=False):
     global _ENGINE
     global _SESSION
     if not _ENGINE:
-        _ENGINE = create_engine(dsn, echo=True)
+        _ENGINE = create_engine(dsn)
         _SESSION = scoped_session(sessionmaker(_ENGINE))
 
 class session_context(ContextDecorator):
@@ -35,3 +35,12 @@ class session_context(ContextDecorator):
 
     def __exit__(self, *exc):
         _SESSION.remove()
+
+
+def get_session():
+    start_engine()
+    return _SESSION()
+
+def get_engine():
+    start_engine()
+    return _ENGINE

@@ -17,6 +17,16 @@ setuptools.setup(
     install_requires=[
         "requests",
         "sickle",
+        "sqlalchemy",
+        "unidecode",
+        "bibtexparser",
+        "bs4",
+        "ebooklib",
+        "alembic",
+        "colorlog",
+        "doi2bib",
+        "docopt",
+        "crossrefapi"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
