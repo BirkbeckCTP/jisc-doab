@@ -10,7 +10,7 @@ EbookLib==0.17.1
 future==0.17.1
 idna==2.8
 -e git+git@github.com:mauromsl/jisc-doab.git@642393f0e1d218d8b227b91c5f6a705f401972c9#egg=jisc_doab
-lxml==4.3.4
+lxml==4.9.1
 pyparsing==2.4.0
 requests==2.22.0
 Sickle==0.6.4
